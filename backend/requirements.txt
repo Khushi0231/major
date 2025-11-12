@@ -1,16 +1,14 @@
 # Core Framework
-fastapi==0.104.1
+fastapi==0.103.2
 uvicorn==0.24.0
-pydantic==2.5.0
+pydantic==2.4.2
 python-multipart==0.0.6
 
-# HTTP & Async
+# HTTP
 requests==2.31.0
-httpx==0.25.0
 
-# Database
+# Database (SQLite only, no ChromaDB for now)
 sqlalchemy==2.0.23
-chromadb==0.4.11
 
 # Document Processing
 pypdf==3.17.1
