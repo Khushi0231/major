@@ -1,35 +1,32 @@
-from fastapi import FastAPI, File, UploadFile, HTTPException
-from fastapi.responses import JSONResponse
+
+"""DRAVIS Backend - Main FastAPI Application"""
+from fastapi import FastAPI, File, UploadFile, HTTPException, BackgroundTasks
+from fastapi.responses import JSONResponse, FileResponse
 from fastapi.middleware.cors import CORSMiddleware
-import logging
-import asyncio
-from pathlib import Path
+from pydantic import BaseModel
 from typing import List, Optional
+import uvicorn
+import logging
+from datetime import datetime
+from pathlib import Path
 
-from config import (
-    API_HOST, API_PORT, API_LOG_LEVEL,
-    UPLOAD_DIR, LOG_DIR, LOG_FILE
-)
+# Import modules
+from backend.models.ollama_handler import OllamaHandler
+from backend.models.embedding_manager import EmbeddingManager
+from backend.rag.document_parser import DocumentParser
+from backend.rag.retriever import Retriever
+from backend.db.sqlite_manager import SQLiteManager
+from backend.db.chroma_store import ChromaStore
+from backend.utils.logger import setup_logger
 
-# Configure logging
-logging.basicConfig(
-    level=getattr(logging, API_LOG_LEVEL.upper()),
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.FileHandler(LOG_FILE),
-        logging.StreamHandler()
-    ]
-)
-logger = logging.getLogger(__name__)
+logger = setup_logger(__name__)
 
-# Initialize FastAPI
 app = FastAPI(
-    title="DRAVIS",
-    description="Offline Claude-Style Intelligent Study Assistant",
+    title="DRAVIS Backend",
+    description="Offline Claude-Style AI Study Assistant",
     version="1.0.0"
 )
 
-# CORS Middleware
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -38,101 +35,166 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Initialize components
+ollama = OllamaHandler()
+em = EmbeddingManager(ollama)
+retriever = Retriever(em)
+db = SQLiteManager()
+chroma = ChromaStore()
+
+# Request/Response models
+class ChatRequest(BaseModel):
+    message: str
+    use_rag: bool = False
+
+class ChatResponse(BaseModel):
+    response: str
+    citations: List[dict]
+    confidence: float
+
+class UploadResponse(BaseModel):
+    status: str
+    filename: str
+    size: int
+
+# Endpoints
 @app.get("/healthcheck")
 async def healthcheck():
-    """Health check endpoint"""
-    return {"status": "operational", "service": "DRAVIS Backend"}
+    """Service health check"""
+    return {
+        "status": "operational",
+        "service": "DRAVIS Backend",
+        "version": "1.0.0",
+        "ollama_available": ollama.available,
+        "timestamp": datetime.now().isoformat()
+    }
 
 @app.post("/chat")
-async def chat(message: str, use_rag: bool = False, context: Optional[str] = None):
+async def chat(request: ChatRequest):
     """Process chat message with optional RAG"""
     try:
-        logger.info(f"Processing message: {message[:50]}...")
-        # TODO: Implement RAG and LLM integration
-        return {
-            "response": f"Echo: {message}",
-            "citations": [],
-            "confidence": 0.8
-        }
+        logger.info(f"Chat: {request.message[:50]}...")
+        
+        # Generate response
+        response_text = ollama.generate(request.message)
+        
+        # Get citations if RAG enabled
+        citations = []
+        if request.use_rag:
+            results = retriever.retrieve(request.message, top_k=2)
+            citations = [{"source": r["id"], "text": r["text"][:100]} for r in results]
+        
+        # Store in history
+        db.add_message(request.message, response_text, request.use_rag)
+        
+        return ChatResponse(
+            response=response_text,
+            citations=citations,
+            confidence=0.95
+        )
     except Exception as e:
-        logger.error(f"Error in chat endpoint: {str(e)}")
+        logger.error(f"Chat error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/upload")
 async def upload_file(file: UploadFile = File(...)):
-    """Upload and process documents"""
+    """Upload and index document"""
     try:
-        logger.info(f"Uploading file: {file.filename}")
-        UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
-        filepath = UPLOAD_DIR / file.filename
+        upload_dir = Path("data/uploads")
+        upload_dir.mkdir(parents=True, exist_ok=True)
         
-        contents = await file.read()
+        filepath = upload_dir / file.filename
+        content = await file.read()
+        
         with open(filepath, "wb") as f:
-            f.write(contents)
+            f.write(content)
         
-        # TODO: Parse file and add to vector store
-        return {
-            "status": "success",
-            "filename": file.filename,
-            "size": len(contents)
-        }
+        # Parse document
+        text = DocumentParser.parse(str(filepath))
+        chunks = DocumentParser.chunk_text(text)
+        
+        # Add to retriever and chroma
+        for i, chunk in enumerate(chunks):
+            doc_id = f"{file.filename}_chunk_{i}"
+            retriever.add_document(doc_id, chunk)
+            embedding = em.embed(chunk)
+            chroma.add(doc_id, chunk, embedding)
+        
+        logger.info(f"Uploaded: {file.filename}")
+        
+        return UploadResponse(
+            status="success",
+            filename=file.filename,
+            size=len(content)
+        )
     except Exception as e:
-        logger.error(f"Error uploading file: {str(e)}")
+        logger.error(f"Upload error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/list-docs")
 async def list_documents():
-    """List all indexed documents"""
-    try:
-        files = list(UPLOAD_DIR.glob("*"))
-        return {"documents": [f.name for f in files]}
-    except Exception as e:
-        logger.error(f"Error listing documents: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
+    """List uploaded documents"""
+    upload_dir = Path("data/uploads")
+    docs = [f.name for f in upload_dir.glob("*")] if upload_dir.exists() else []
+    return {"total": len(docs), "documents": docs}
+
+@app.get("/chat-history")
+async def chat_history(limit: int = 10):
+    """Get chat history"""
+    history = db.get_history(limit)
+    return {"total": len(history), "history": history}
 
 @app.post("/tts")
 async def text_to_speech(text: str):
-    """Convert text to speech"""
-    try:
-        logger.info(f"Converting text to speech: {text[:50]}...")
-        # TODO: Implement Piper TTS
-        return {
-            "status": "success",
-            "audio_url": "/audio/output.wav"
-        }
-    except Exception as e:
-        logger.error(f"Error in TTS: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
+    """Text to speech (placeholder)"""
+    logger.info(f"TTS: {text[:50]}...")
+    return {"status": "success", "text": text, "audio_url": "/audio/output.wav"}
 
 @app.post("/stt")
 async def speech_to_text(audio: UploadFile = File(...)):
-    """Convert speech to text"""
-    try:
-        logger.info(f"Converting speech to text from {audio.filename}")
-        # TODO: Implement Whisper.cpp STT
-        return {
-            "status": "success",
-            "text": "Transcribed text here"
-        }
-    except Exception as e:
-        logger.error(f"Error in STT: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
+    """Speech to text (placeholder)"""
+    logger.info(f"STT: {audio.filename}")
+    return {"status": "success", "text": "[Transcribed from audio]"}
 
-@app.exception_handler(Exception)
-async def global_exception_handler(request, exc):
-    logger.error(f"Unhandled exception: {str(exc)}")
-    return JSONResponse(
-        status_code=500,
-        content={"detail": "Internal server error", "error": str(exc)}
-    )
+@app.get("/stats")
+async def stats():
+    """System statistics"""
+    upload_dir = Path("data/uploads")
+    num_docs = len(list(upload_dir.glob("*"))) if upload_dir.exists() else 0
+    history = db.get_history(1)
+    
+    return {
+        "documents_indexed": num_docs,
+        "chat_messages": len(history),
+        "retriever_docs": len(retriever.documents),
+        "chroma_vectors": len(chroma.vectors)
+    }
 
 if __name__ == "__main__":
-    import uvicorn
-    logger.info(f"Starting DRAVIS backend on {API_HOST}:{API_PORT}")
+    print("""
+    ╔══════════════════════════════════════════════════════════════╗
+    ║         DRAVIS - Offline AI Study Assistant                  ║
+    ║  Dynamic Reasoning AI for Virtual Intelligent Study          ║
+    ╚══════════════════════════════════════════════════════════════╝
+    
+    🚀 Starting DRAVIS Backend Server...
+    📍 API: http://0.0.0.0:8000
+    📚 Docs: http://localhost:8000/docs
+    
+    Endpoints:
+    ✓ GET  /healthcheck      - Service status
+    ✓ POST /chat             - Chat with AI
+    ✓ POST /upload           - Upload documents
+    ✓ GET  /list-docs        - List documents
+    ✓ GET  /chat-history     - Get history
+    ✓ POST /tts              - Text to speech
+    ✓ POST /stt              - Speech to text
+    ✓ GET  /stats            - System stats
+    """)
+    
     uvicorn.run(
         app,
-        host=API_HOST,
-        port=API_PORT,
-        reload=True,
-        log_level=API_LOG_LEVEL
+        host="0.0.0.0",
+        port=8000,
+        log_level="info"
     )
