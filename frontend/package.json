@@ -1,0 +1,30 @@
+{
+  "name": "dravis-frontend",
+  "version": "1.0.0",
+  "description": "DRAVIS - Offline Claude-Style Study Assistant",
+  "type": "module",
+  "scripts": {
+    "dev": "tauri dev",
+    "build": "tauri build",
+    "preview": "vite preview",
+    "type-check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "axios": "^1.6.1",
+    "tailwindcss": "^3.3.5",
+    "@tauri-apps/api": "^1.5.1",
+    "zustand": "^4.4.1",
+    "react-markdown": "^9.0.0"
+  },
+  "devDependencies": {
+    "@types/react": "^18.2.28",
+    "@types/react-dom": "^18.2.11",
+    "@types/node": "^20.5.1",
+    "typescript": "^5.2.2",
+    "vite": "^4.5.0",
+    "@vitejs/plugin-react": "^4.1.0",
+    "@tauri-apps/cli": "^1.5.1"
+  }
+}
