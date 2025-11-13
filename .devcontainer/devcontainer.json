@@ -1,0 +1,18 @@
+{
+  "name": "DRAVIS Development",
+  "image": "mcr.microsoft.com/devcontainers/python:3.11-bullseye",
+  "features": {
+    "ghcr.io/devcontainers/features/node:latest": {}
+  },
+  "postCreateCommand": "pip install -r requirements.txt && npm install",
+  "forwardPorts": [8000, 3000],
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-python.python",
+        "dbaeumer.vscode-eslint",
+        "dsznajder.es7-react-js-snippets"
+      ]
+    }
+  }
+}
