@@ -1,33 +1,53 @@
-import React from 'react';
+import React from "react";
 
-interface SidebarProps {
-  documents: string[];
-  onNewChat: () => void;
-  onSelectDocument: (doc: string) => void;
-}
-
-export const Sidebar: React.FC<SidebarProps> = ({ documents, onNewChat, onSelectDocument }) => {
+export default function Sidebar({ active, setActive, theme, setTheme, status }: any) {
   return (
-    <div className="w-64 bg-gray-900 text-white p-4 flex flex-col">
-      <button
-        onClick={onNewChat}
-        className="w-full mb-6 px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg font-semibold"
-      >
-        + New Chat
-      </button>
-      <h2 className="text-lg font-bold mb-4">Documents</h2>
-      <div className="flex-1 overflow-y-auto space-y-2">
-        {documents.map((doc, idx) => (
-          <div
-            key={idx}
-            onClick={() => onSelectDocument(doc)}
-            className="p-2 bg-gray-800 hover:bg-gray-700 rounded cursor-pointer truncate"
-            title={doc}
-          >
-            {doc}
+    <div className="flex flex-col h-full">
+      <div className="mb-6">
+        <div style={{display:"flex",alignItems:"center",gap:12}}>
+          <div style={{width:48,height:48,background:"#16a34a",borderRadius:10}} />
+          <div>
+            <div style={{fontWeight:800,fontSize:18}}>DRAVIS</div>
+            <div className="kv">Offline Study Assistant</div>
           </div>
-        ))}
+        </div>
       </div>
+
+      <nav className="mb-6">
+        <button className={`btn small w-full mb-2 ${active==="chat"?"border-accent-2":""}`} onClick={()=>setActive("chat")}>Chat</button>
+        <button className={`btn small w-full mb-2 ${active==="docs"?"border-accent-2":""}`} onClick={()=>setActive("docs")}>Documents</button>
+        <button className={`btn small w-full mb-2 ${active==="quiz"?"border-accent-2":""}`} onClick={()=>setActive("quiz")}>Quiz Generator</button>
+        <button className={`btn small w-full mb-2 ${active==="settings"?"border-accent-2":""}`} onClick={()=>setActive("settings")}>Settings</button>
+      </nav>
+
+      <div className="mt-auto">
+        <div className="kv mb-3">Mode</div>
+        <div className="flex gap-2 mb-4">
+          <button className="btn small">Normal</button>
+          <button className="btn small">Exam</button>
+          <button className="btn small">Practice</button>
+        </div>
+
+        <div className="kv mb-2">Theme</div>
+        <div className="flex gap-2">
+          <button className="btn small" onClick={()=>setTheme("dark")}>Dark</button>
+          <button className="btn small" onClick={()=>setTheme("light")}>Light</button>
+        </div>
+
+        <div className="kv mt-6">LLM Status</div>
+        <div style={{marginTop:8}}>
+          <div className="doc-item">
+            <div>
+              <div style={{fontWeight:700}}>Local LLM</div>
+              <div className="kv">{ status==="online" ? "Loaded" : "Not loaded" }</div>
+            </div>
+            <div style={{color: status==="online" ? "#4ade80" : "#f87171", fontWeight:700}}>
+              { status==="online" ? "ONLINE" : "OFFLINE" }
+            </div>
+          </div>
+        </div>
+      </div>
+
     </div>
   );
-};
+}

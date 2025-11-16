@@ -1,61 +1,31 @@
-const API_BASE = 'http://localhost:8000/api';
+const BASE = import.meta.env.VITE_API_URL || "http://127.0.0.1:8000";
 
-export const apiClient = {
-  async chat(message: string, useRag: boolean = true, documents: string[] = []) {
-    const response = await fetch(`${API_BASE}/chat`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message, useRag, documents }),
+export async function sendMessage(message: string, use_rag = false) {
+  try {
+    const r = await fetch(`${BASE}/api/chat`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ message, use_rag })
     });
-    return response.json();
-  },
+    return await r.json();
+  } catch (e) {
+    return { response: `Network error: ${String(e)}`, source: "error", detail: String(e) };
+  }
+}
 
-  async uploadDocument(file: File) {
-    const formData = new FormData();
-    formData.append('file', file);
-    const response = await fetch(`${API_BASE}/upload`, {
-      method: 'POST',
-      body: formData,
-    });
-    return response.json();
-  },
+export async function uploadFile(file: File) {
+  const fd = new FormData();
+  fd.append("file", file);
+  const r = await fetch(`${BASE}/api/upload`, { method: "POST", body: fd });
+  return r.json();
+}
 
-  async listDocuments() {
-    const response = await fetch(`${API_BASE}/list-docs`);
-    return response.json();
-  },
+export async function listDocs() {
+  const r = await fetch(`${BASE}/api/documents`);
+  return r.ok ? r.json() : { docs: [] };
+}
 
-  async getChatHistory() {
-    const response = await fetch(`${API_BASE}/chat-history`);
-    return response.json();
-  },
-
-  async speak(text: string) {
-    const response = await fetch(`${API_BASE}/tts`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text }),
-    });
-    return response.blob();
-  },
-
-  async transcribe(audioBlob: Blob) {
-    const formData = new FormData();
-    formData.append('audio', audioBlob);
-    const response = await fetch(`${API_BASE}/stt`, {
-      method: 'POST',
-      body: formData,
-    });
-    return response.json();
-  },
-
-  async getStats() {
-    const response = await fetch(`${API_BASE}/stats`);
-    return response.json();
-  },
-
-  async healthCheck() {
-    const response = await fetch(`${API_BASE}/healthcheck`);
-    return response.json();
-  },
-};
+export async function deleteDoc(filename: string) {
+  const r = await fetch(`${BASE}/api/documents/${encodeURIComponent(filename)}`, { method: "DELETE" });
+  return r.json();
+}

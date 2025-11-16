@@ -1,70 +1,49 @@
+import React, { useEffect, useState } from "react";
+import Sidebar from "./components/Sidebar";
+import ChatPanel from "./components/ChatPanel";
+import DocumentsPanel from "./components/DocumentsPanel";
+import VoiceControls from "./components/VoiceControls";
+import QuizPanel from "./components/QuizPanel";
 
-import React, { useState } from 'react';
-import './App.css';
+export default function App(){
+  const [active, setActive] = useState<"chat"|"docs"|"quiz"|"settings">("chat");
+  const [theme, setTheme] = useState<"dark"|"light">("dark");
+  const [status, setStatus] = useState<"online"|"offline">("offline");
 
-function App() {
-  const [messages, setMessages] = useState<{role: string, content: string}[]>([]);
-  const [input, setInput] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [documents, setDocuments] = useState<string[]>([]);
-
-  const sendMessage = async () => {
-    if (!input.trim()) return;
-    
-    const newMsg = { role: 'user', content: input };
-    setMessages([...messages, newMsg]);
-    setInput('');
-    setLoading(true);
-    
-    try {
-      const res = await fetch('http://localhost:8000/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: input, use_rag: documents.length > 0 })
-      });
-      const data = await res.json();
-      setMessages(prev => [...prev, { role: 'assistant', content: data.response }]);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  };
+  useEffect(()=> {
+    document.documentElement.classList.toggle("light", theme==="light");
+  },[theme]);
 
   return (
-    <div className="App">
-      <div className="chat-container">
-        <div className="chat-panel">
-          <div className="messages">
-            {messages.map((msg, i) => (
-              <div key={i} className={`message ${msg.role}`}>
-                <div className="content">{msg.content}</div>
-              </div>
-            ))}
-            {loading && <div className="message assistant"><div className="typing">...</div></div>}
+    <div className="app-shell">
+      <aside className="sidebar">
+        <Sidebar
+          active={active}
+          setActive={setActive}
+          theme={theme}
+          setTheme={setTheme}
+          status={status}
+        />
+      </aside>
+
+      <main className="main-panel">
+        <header className="flex items-center justify-between">
+          <div>
+            <h2 style={{fontSize:20,fontWeight:700}}>DRAVIS — Offline Chat</h2>
+            <div className="kv">Your offline study assistant • Local LLM</div>
           </div>
-          <div className="input-area">
-            <input
-              type="text"
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
-              placeholder="Ask me anything..."
-            />
-            <button onClick={sendMessage} disabled={loading}>Send</button>
-          </div>
-        </div>
-        <div className="sidebar">
-          <h3>Documents ({documents.length})</h3>
-          <div className="doc-list">
-            {documents.map((doc, i) => (
-              <div key={i} className="doc-item">{doc}</div>
-            ))}
-          </div>
-        </div>
-      </div>
+          <div className="kv">Status: <strong style={{color: status==="online"?"#4ade80":"#f87171"}}>{status}</strong></div>
+        </header>
+
+        {active==="chat" && <ChatPanel setStatus={setStatus} />}
+        {active==="docs" && <DocumentsPanel setStatus={setStatus} />}
+        {active==="quiz" && <QuizPanel />}
+        {active==="settings" && (
+          <div className="p-6 bg-white/5 rounded">Settings coming soon</div>
+        )}
+
+        <VoiceControls />
+      </main>
     </div>
   );
 }
-
-export default App;

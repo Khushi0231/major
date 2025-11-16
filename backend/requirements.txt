@@ -12,7 +12,7 @@ sqlalchemy==2.0.23
 
 # Document Processing
 pypdf==3.17.1
-Pillow==10.0.1
+Pillow==10.3.0
 
 # Utilities
 python-dotenv==1.0.0
