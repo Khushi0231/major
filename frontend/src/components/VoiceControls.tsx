@@ -1,16 +1,9 @@
 import React from "react";
-
-export default function VoiceControls(){
-  // placeholder - offline voice integrations (VOSK, TTS) plug here
+export default function VoiceControls() {
   return (
-    <div style={{marginTop:12}}>
-      <div className="p-3 bg-white/5 rounded flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <button className="btn small">🎤</button>
-          <div className="kv">Voice: offline (VOSK) ready</div>
-        </div>
-        <div className="kv">Text-to-speech: available (local)</div>
-      </div>
+    <div className="flex justify-center items-center gap-6 py-4 bg-gray-950 border-t border-gray-800">
+      <button className="bg-pink-700 hover:bg-pink-600 text-white px-5 py-2 rounded transition">🎤 Record</button>
+      <button className="bg-pink-700 hover:bg-pink-600 text-white px-5 py-2 rounded transition">🔊 Play</button>
     </div>
   );
 }

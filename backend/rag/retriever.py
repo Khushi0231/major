@@ -1,5 +1,7 @@
 import numpy as np
 from backend.rag.rag_store import index, docs
+from models.embedding_manager import embed_text
+
 from backend.models.ollama_handler import OllamaHandler
 
 # Use the SAME embedder used by chat

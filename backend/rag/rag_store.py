@@ -1,3 +1,5 @@
+from models.embedding_manager import embed_text
+
 import faiss
 import numpy as np
 import os
