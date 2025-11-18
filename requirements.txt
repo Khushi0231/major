@@ -16,10 +16,15 @@ pdf2docx==0.5.6
 python-docx==1.1.0
 python-pptx==0.6.23
 openpyxl==3.1.2
-Pillow==10.1.0
+docling==1.0.0
+pytesseract==0.3.10
+
+# Image Processing
 opencv-python==4.8.1.78
+Pillow==9.5.0
 
 # Speech Processing
+openai-whisper==20231117
 faster-whisper==0.10.0
 pyttsx3==2.90
 SpeechRecognition==3.10.0

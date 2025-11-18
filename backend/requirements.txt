@@ -1,19 +1,37 @@
-# Core Framework
-fastapi==0.103.2
-uvicorn==0.24.0
-pydantic==2.4.2
+# FastAPI Backend
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+pydantic==2.5.0
 python-multipart==0.0.6
 
-# HTTP
-requests==2.31.0
-
-# Database (SQLite only, no ChromaDB for now)
-sqlalchemy==2.0.23
+# AI/ML Dependencies  
+sentence-transformers==2.2.2
+chromadb==0.4.18
+llama-cpp-python==0.2.19
+langchain==0.0.340
+langchain-community==0.0.1
 
 # Document Processing
-pypdf==3.17.1
-Pillow==10.3.0
+PyMuPDF>=1.24.0; platform_system != "Windows"
+fitz>=0.0.1.dev2; platform_system == "Windows"
+pypdf>=3.17.0
+python-docx==1.1.0
+python-pptx==0.6.23
+openpyxl==3.1.2
+pytesseract==0.3.10
+
+# Image Processing
+opencv-python==4.8.1.78
+Pillow==9.5.0
+
+# Speech Processing
+openai-whisper==20231117
+faster-whisper==0.10.0
+pyttsx3==2.90
+SpeechRecognition==3.10.0
+pyaudio==0.2.14
 
 # Utilities
-python-dotenv==1.0.0
-loguru==0.7.2
+requests==2.31.0
+numpy==1.26.2
+pandas==2.1.3

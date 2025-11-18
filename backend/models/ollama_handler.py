@@ -25,7 +25,7 @@ try:
         logger.error(f"Model file missing: {MODEL_PATH}")
 
 except Exception as e:
-    logger.exception("Failed to load llama_cpp model", e)
+    logger.exception("Failed to load llama_cpp model: %s", str(e))
     _llm = None
 
 

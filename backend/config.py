@@ -10,7 +10,7 @@ class Config:
     API_DESCRIPTION = "Dynamic Reasoning AI for Virtual Intelligent Study"
     
     # Server Settings
-    HOST = os.getenv("API_HOST", "0.0.0.0")
+    HOST = os.getenv("API_HOST", "127.0.0.1")  # Changed to 127.0.0.1 for Windows
     PORT = int(os.getenv("API_PORT", "8000"))
     DEBUG = os.getenv("DEBUG", "False").lower() == "true"
     
@@ -26,14 +26,21 @@ class Config:
     EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "nomic-embed-text")
     EMBEDDING_BATCH_SIZE = int(os.getenv("EMBEDDING_BATCH_SIZE", "32"))
     
+    # Data Directory (Windows-compatible)
+    BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    DRAVIS_DATA_DIR = os.path.join(BASE_DIR, "dravis_data")
+    
     # Database Settings
-    DB_PATH = os.getenv("DB_PATH", "/workspaces/major/data/dravis.db")
-    CHROMA_PATH = os.getenv("CHROMA_PATH", "/workspaces/major/data/chroma")
+    DB_PATH = os.getenv("DB_PATH", os.path.join(DRAVIS_DATA_DIR, "dravis.db"))
+    CHROMA_PATH = os.getenv("CHROMA_PATH", os.path.join(DRAVIS_DATA_DIR, "chroma_db"))
     
     # Document Settings
-    UPLOAD_DIR = os.getenv("UPLOAD_DIR", "/workspaces/major/uploads")
-    MAX_FILE_SIZE = int(os.getenv("MAX_FILE_SIZE", str(50 * 1024 * 1024)))  # 50MB
-    ALLOWED_EXTENSIONS = {"pdf", "docx", "pptx", "txt", "csv", "jpg", "png", "mp3", "wav"}
+    UPLOAD_DIR = os.getenv("UPLOAD_DIR", os.path.join(DRAVIS_DATA_DIR, "uploads"))
+    MAX_FILE_SIZE = int(os.getenv("MAX_FILE_SIZE", str(1024 * 1024 * 1024)))  # 1GB
+    ALLOWED_EXTENSIONS = {"pdf", "docx", "pptx", "txt", "md", "jpg", "jpeg", "png", "bmp", "py", "java", "cpp", "js", "json"}
+    
+    # PIN Settings
+    PIN_HASH_FILE = os.path.join(DRAVIS_DATA_DIR, "pin.hash")
     
     # Voice Settings
     TTS_ENGINE = os.getenv("TTS_ENGINE", "pyttsx3")
@@ -47,7 +54,15 @@ class Config:
     
     # Logging Settings
     LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
-    LOG_FILE = os.getenv("LOG_FILE", "/workspaces/major/logs/dravis.log")
+    LOG_DIR = os.path.join(DRAVIS_DATA_DIR, "logs")
+    LOG_FILE = os.getenv("LOG_FILE", os.path.join(LOG_DIR, "dravis.log"))
+    
+    @classmethod
+    def ensure_directories(cls):
+        """Create all necessary directories"""
+        dirs = [cls.DRAVIS_DATA_DIR, cls.UPLOAD_DIR, cls.LOG_DIR, cls.CHROMA_PATH]
+        for d in dirs:
+            os.makedirs(d, exist_ok=True)
 
     @classmethod
     def get_config(cls) -> dict:
