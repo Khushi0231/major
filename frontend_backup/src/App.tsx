@@ -24,12 +24,11 @@ function App() {
   const [activeTab, setActiveTab] = useState<ActiveTab>('chat');
   const [sessions, setSessions] = useState<Session[]>([]);
   const [activeSessionId, setActiveSessionId] = useState<string>('');
-  const [sidebarOpen, setSidebarOpen] = useState(true);
 
   // Check backend health on mount
   useEffect(() => {
     checkBackendHealth();
-    const interval = setInterval(checkBackendHealth, 30000);
+    const interval = setInterval(checkBackendHealth, 30000); // Check every 30s
     return () => clearInterval(interval);
   }, []);
 
@@ -54,7 +53,7 @@ function App() {
 
   const checkBackendHealth = async () => {
     try {
-      const response = await fetch('http://localhost:8000/');
+      const response = await fetch('/api/health');
       if (response.ok) {
         setStatus('online');
       } else {
@@ -101,18 +100,21 @@ function App() {
     setActiveTab('chat');
   };
 
-  const handleSessionSelect = (sessionId: string) => {
-    setActiveSessionId(sessionId);
+  const handleFirstMessage = (title: string) => {
+    const updated = sessions.map((s) =>
+      s.id === activeSessionId ? { ...s, title } : s
+    );
+    setSessions(updated);
+    localStorage.setItem(SESSIONS_KEY, JSON.stringify(updated));
+  };
+
+  const handleSelectSession = (id: string) => {
+    setActiveSessionId(id);
     setActiveTab('chat');
   };
 
-  const handleSessionDelete = (sessionId: string) => {
-    const updated = sessions.filter(s => s.id !== sessionId);
-    setSessions(updated);
-    localStorage.setItem(SESSIONS_KEY, JSON.stringify(updated));
-    if (activeSessionId === sessionId && updated.length > 0) {
-      setActiveSessionId(updated[0].id);
-    }
+  const handleOpenSettings = () => {
+    setActiveTab('settings');
   };
 
   if (isLocked) {
@@ -120,67 +122,45 @@ function App() {
   }
 
   return (
-    <div className={`app-container theme-${theme}`}>
-      <div className="app-layout">
-        <Sidebar
-          activeTab={activeTab}
-          onTabChange={setActiveTab}
-          sessions={sessions}
-          activeSessionId={activeSessionId}
-          onSessionSelect={handleSessionSelect}
-          onSessionDelete={handleSessionDelete}
-          onNewChat={handleNewChat}
-          status={status}
-          collapsed={!sidebarOpen}
-        />
+    <div className="app">
+      <Sidebar
+        active={activeTab}
+        setActive={setActiveTab}
+        theme={theme}
+        setTheme={setTheme}
+        status={status}
+        sessions={sessions}
+        activeSessionId={activeSessionId}
+        onSelectSession={handleSelectSession}
+        onNewChat={handleNewChat}
+        onOpenSettings={handleOpenSettings}
+      />
+      
+      <main className="main-content">
+        {activeTab === 'chat' && (
+          <ChatPanel
+            setStatus={setStatus}
+            sessionId={activeSessionId}
+            onFirstMessage={handleFirstMessage}
+          />
+        )}
         
-        <div className="main-container">
-          <div className="top-bar">
-            <button 
-              className="menu-btn"
-              onClick={() => setSidebarOpen(!sidebarOpen)}
-            >
-              ☰
-            </button>
-            <div className="top-bar-right">
-              <span className={`status ${status}`}>{status === 'online' ? '🟢' : '🔴'}</span>
-              <button 
-                className="theme-btn"
-                onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-              >
-                {theme === 'dark' ? '☀️' : '🌙'}
-              </button>
-              <button 
-                className="settings-btn"
-                onClick={() => setActiveTab('settings')}
-              >
-                ⚙️
-              </button>
-            </div>
-          </div>
-
-          <div className="content">
-            {activeTab === 'chat' && (
-              <ChatPanel sessionId={activeSessionId} setStatus={setStatus} onFirstMessage={(title) => {
-                const updated = sessions.map(s => 
-                  s.id === activeSessionId ? { ...s, title } : s
-                );
-                setSessions(updated);
-                localStorage.setItem(SESSIONS_KEY, JSON.stringify(updated));
-              }} />
-            )}
-            {activeTab === 'docs' && <DocumentsPanel setStatus={setStatus} />}
-            {activeTab === 'quiz' && <QuizPanel />}
-            {activeTab === 'settings' && (
-              <SettingsPanel
-                theme={theme}
-                onThemeChange={setTheme}
-                onLockApp={() => setIsLocked(true)}
-              />
-            )}
-          </div>
-        </div>
-      </div>
+        {activeTab === 'docs' && (
+          <DocumentsPanel setStatus={setStatus} />
+        )}
+        
+        {activeTab === 'quiz' && (
+          <QuizPanel />
+        )}
+        
+        {activeTab === 'settings' && (
+          <SettingsPanel
+            theme={theme}
+            setTheme={setTheme}
+            onLock={() => setIsLocked(true)}
+          />
+        )}
+      </main>
     </div>
   );
 }

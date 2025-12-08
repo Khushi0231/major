@@ -1,144 +1,111 @@
-const BASE = import.meta.env.VITE_API_URL || "http://127.0.0.1:8000";
-
-export interface ChatRequest {
-  message: string;
-  use_documents?: boolean;
-  mode?: "normal" | "exam_prep" | "practice" | "vocabulary";
-  conversation_id?: string;
-}
-
-export interface ChatResponse {
-  response: string;
-  language?: string;
-  mode?: string;
-  error?: string;
-}
+const API_BASE = "http://localhost:8000/api";
 
 export async function sendMessage(
   message: string,
-  useDocuments: boolean = false,
-  mode: string = "normal"
-): Promise<ChatResponse> {
-  try {
-    const r = await fetch(`${BASE}/api/chat`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        message,
-        use_documents: useDocuments,
-        mode
-      })
-    });
-    return await r.json();
-  } catch (e) {
-    return {
-      response: "Network error",
-      error: String(e)
-    };
-  }
-}
-
-export async function uploadFile(file: File) {
-  const fd = new FormData();
-  fd.append("file", file);
-  const r = await fetch(`${BASE}/api/upload`, {
-    method: "POST",
-    body: fd
-  });
-  return r.json();
-}
-
-export async function listDocs() {
-  try {
-    const r = await fetch(`${BASE}/api/documents`);
-    if (!r.ok) return [];
-    const data = await r.json();
-    return data.docs || [];
-  } catch (e) {
-    return [];
-  }
-}
-
-export async function deleteDoc(documentId: string) {
-  const r = await fetch(`${BASE}/api/documents/${encodeURIComponent(documentId)}`, {
-    method: "DELETE"
-  });
-  return r.json();
-}
-
-export async function speechToText(audioFile: File, language?: string) {
-  const fd = new FormData();
-  fd.append("audio_file", audioFile);
-  if (language) {
-    fd.append("language", language);
-  }
-  const r = await fetch(`${BASE}/api/stt`, {
-    method: "POST",
-    body: fd
-  });
-  return r.json();
-}
-
-export interface QuizRequest {
-  topic: string;
-  num_questions?: number;
-  difficulty?: "easy" | "medium" | "hard";
-  quiz_type?: "simple" | "advanced";
-  use_documents?: boolean;
-}
-
-export async function generateQuiz(req: QuizRequest) {
-  const r = await fetch(`${BASE}/api/quiz`, {
+  useDocuments: boolean,
+  mode: string
+): Promise<{ response: string }> {
+  const res = await fetch(`${API_BASE}/chat`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(req)
+    body: JSON.stringify({
+      message,
+      use_documents: useDocuments,
+      mode,
+    }),
   });
-  return r.json();
+
+  if (!res.ok) throw new Error("Chat failed");
+  return res.json();
 }
 
-export async function getChatHistory(limit: number = 50) {
-  const r = await fetch(`${BASE}/api/chat/history?limit=${limit}`);
-  return r.json();
-}
+export async function uploadFile(file: File): Promise<{ chunks: number }> {
+  const formData = new FormData();
+  formData.append("file", file);
 
-export async function exportChatHistory() {
-  const r = await fetch(`${BASE}/api/chat/export`, {
-    method: "POST"
+  const res = await fetch(`${API_BASE}/upload`, {
+    method: "POST",
+    body: formData,
   });
-  if (r.ok) {
-    const blob = await r.blob();
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `dravis_chat_export_${new Date().toISOString().split('T')[0]}.md`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    window.URL.revokeObjectURL(url);
-    return { success: true };
-  }
-  return { success: false };
+
+  if (!res.ok) throw new Error("Upload failed");
+  return res.json();
 }
 
-export async function setPIN(pin: string) {
-  const r = await fetch(`${BASE}/api/pin/set`, {
+export async function listDocs(): Promise<Array<{ name: string; chunks: number }>> {
+  const res = await fetch(`${API_BASE}/documents`);
+  if (!res.ok) throw new Error("Failed to list documents");
+  const data = await res.json();
+  return data.documents || [];
+}
+
+export async function deleteDoc(docName: string): Promise<void> {
+  const res = await fetch(`${API_BASE}/documents/${docName}`, {
+    method: "DELETE",
+  });
+  if (!res.ok) throw new Error("Delete failed");
+}
+
+export async function generateQuiz(
+  topic: string,
+  difficulty: string,
+  quizType: string,
+  fromDocuments: boolean
+): Promise<{ questions: any[] }> {
+  const res = await fetch(`${API_BASE}/quiz/generate`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ pin })
+    body: JSON.stringify({
+      topic,
+      difficulty,
+      quiz_type: quizType,
+      from_documents: fromDocuments,
+    }),
   });
-  return r.json();
+
+  if (!res.ok) throw new Error("Quiz generation failed");
+  return res.json();
 }
 
-export async function verifyPIN(pin: string) {
-  const r = await fetch(`${BASE}/api/pin/verify`, {
+export async function setPIN(pin: string): Promise<void> {
+  const res = await fetch(`${API_BASE}/pin/set`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ pin })
+    body: JSON.stringify({ pin }),
   });
-  return r.json();
+
+  if (!res.ok) throw new Error("Failed to set PIN");
 }
 
-export async function checkPINExists() {
-  const r = await fetch(`${BASE}/api/pin/exists`);
-  return r.json();
+export async function verifyPIN(pin: string): Promise<{ verified: boolean }> {
+  const res = await fetch(`${API_BASE}/pin/verify`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ pin }),
+  });
+
+  if (!res.ok) throw new Error("Verification failed");
+  return res.json();
+}
+
+export async function checkPINExists(): Promise<{ exists: boolean }> {
+  const res = await fetch(`${API_BASE}/pin/exists`);
+  if (!res.ok) throw new Error("Check failed");
+  return res.json();
+}
+
+export async function exportChatHistory(): Promise<void> {
+  const res = await fetch(`${API_BASE}/chat/export`, {
+    method: "POST",
+  });
+
+  if (!res.ok) throw new Error("Export failed");
+
+  const blob = await res.blob();
+  const url = window.URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `chat_history_${Date.now()}.md`;
+  a.click();
+  window.URL.revokeObjectURL(url);
 }

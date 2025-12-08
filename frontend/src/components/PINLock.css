@@ -1,0 +1,96 @@
+.pin-lock {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  background: var(--bg-primary);
+}
+
+.pin-card {
+  background: var(--bg-secondary);
+  padding: 32px;
+  border-radius: 12px;
+  width: 400px;
+  max-width: 90%;
+  border: 1px solid var(--border);
+  text-align: center;
+}
+
+.pin-card h3 {
+  margin-bottom: 12px;
+  font-size: 24px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.pin-card p {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-bottom: 24px;
+}
+
+.pin-card input {
+  width: 100%;
+  padding: 12px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+  font-family: monospace;
+  font-size: 24px;
+  letter-spacing: 8px;
+  text-align: center;
+  margin-bottom: 16px;
+  transition: border-color 0.2s;
+}
+
+.pin-card input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.pin-card input::placeholder {
+  letter-spacing: normal;
+  font-size: 13px;
+}
+
+.pin-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.pin-actions button {
+  flex: 1;
+  padding: 10px 16px;
+  border-radius: 6px;
+  border: none;
+  background: var(--accent);
+  color: white;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 13px;
+  transition: opacity 0.2s;
+}
+
+.pin-actions button:hover {
+  opacity: 0.9;
+}
+
+.pin-actions button.secondary {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+}
+
+.pin-error {
+  color: var(--error);
+  margin-top: 12px;
+  font-size: 13px;
+}
+
+.pin-success {
+  color: var(--success);
+  margin-top: 12px;
+  font-size: 13px;
+}

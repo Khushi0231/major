@@ -6,26 +6,33 @@ All dependencies have been installed and the project is ready to run.
 
 ## 🚀 Running the Application
 
-### Step 1: Start Backend Server
+### Step 1: (Optional) Start Ollama
 
-Open a terminal in the project root and run:
+DRAVIS automatically races the local GGUF build and Ollama. If you want the faster Ollama backend:
+
+```powershell
+ollama serve
+ollama pull mistral:7b
+```
+
+Keep this terminal open. Skip this step if you only want the bundled llama-cpp build.
+
+### Step 2: Start Backend Server
 
 ```powershell
 .\backend\venv\Scripts\python.exe backend\main.py
 ```
 
-The backend will start on `http://localhost:8000`
+The backend listens on `http://127.0.0.1:8000`. Logs and data live under `dravis_data/`.
 
-### Step 2: Start Frontend
-
-Open another terminal and run:
+### Step 3: Start Frontend
 
 ```powershell
 cd frontend
 npm run dev
 ```
 
-The frontend will start on `http://localhost:3000` (or another port if 3000 is busy)
+The Vite dev server defaults to `http://localhost:3000`. Pass `-- --host` if you need LAN access.
 
 ### Step 3: Access DRAVIS
 
@@ -36,37 +43,36 @@ Open your browser and navigate to:
 ## 📝 Features Available
 
 ### ✅ Working Features:
-1. **Chat Interface** - Basic chat (without LLM model file)
-2. **Document Upload** - Upload PDF, DOCX, PPTX, TXT files
-3. **Document Management** - View and delete uploaded documents
-4. **Quiz Generation** - Generate quizzes from topics
-5. **Settings** - PIN lock, theme toggle
-6. **Chat History** - View and export chat history
+1. **Chat Interface** - Collapsible sidebar, multi-session history, Markdown export
+2. **Document Upload & RAG** - PDFs, slides, docs, code, and OCR images (1 GB limit)
+3. **Quiz Studio** - MCQ, True/False, fill-in-the-blank, short answer with difficulty levels
+4. **Speech Tools** - Whisper / faster-whisper integration for STT
+5. **Security & Settings** - PIN gate, light/dark theme persistence, chat export
 
-### ⚠️ Requires Model File:
-- **LLM Chat** - Needs Mistral 7B Q4_K_M model file in `backend/models/`
-- **Speech-to-Text** - Whisper models will download automatically on first use
+### ⚠️ Requires Model File / Ollama:
+- **LLM Chat** - Needs _either_ the GGUF file in `backend/models/` **or** a running Ollama model
+- **Speech-to-Text** - Whisper models download automatically on first run
 
-## 🔧 Model Setup (Optional)
+## 🔧 Model Setup
 
-To enable full LLM chat functionality:
+### Option A – Built-in llama-cpp (offline only)
+1. Download `mistral-7b-instruct-v0.2.Q4_K_M.gguf`
+   from [TheBloke on Hugging Face](https://huggingface.co/TheBloke/Mistral-7B-Instruct-v0.2-GGUF).
+2. Place the file in `backend/models/`.
+3. Ensure `llama-cpp-python` is installed (already listed in `backend/requirements.txt`).
 
-1. Download Mistral 7B Q4_K_M model:
-   - Visit: https://huggingface.co/TheBloke/Mistral-7B-Instruct-v0.2-GGUF
-   - Download: `mistral-7b-instruct-v0.2.Q4_K_M.gguf`
-   - Place in: `backend/models/mistral-7b-instruct-v0.2.Q4_K_M.gguf`
-
-2. Install llama-cpp-python (if not already):
-   ```powershell
-   .\backend\venv\Scripts\python.exe -m pip install llama-cpp-python
-   ```
+### Option B – Ollama fallback / turbo mode
+1. Install [Ollama](https://ollama.ai).
+2. Run `ollama serve` once per boot.
+3. Pull one of: `ollama pull mistral:7b` (preferred) or any local model you want.
+4. DRAVIS will automatically call whichever backend responds first.
 
 ## 🎯 Quick Test
 
 1. **Test Backend**: Visit http://localhost:8000 - Should show `{"status": "Backend running", ...}`
 2. **Test Frontend**: Visit http://localhost:3000 - Should show DRAVIS interface
 3. **Upload Document**: Go to Documents tab, upload a PDF or TXT file
-4. **Chat**: Go to Chat tab, type a message (will work even without model file, but responses will be limited)
+4. **Chat**: Go to Chat tab, type a message. If no LLM is available you’ll see a friendly warning.
 
 ## 📊 Current Status
 

@@ -13,23 +13,31 @@ try:
     from llama_cpp import Llama
 
     if os.path.exists(MODEL_PATH):
-        _llm = Llama(
-            model_path=MODEL_PATH,
-            n_ctx=4096,
-            n_threads=6,
-            n_batch=512,
-            verbose=False
-        )
-        logger.info(f"Loaded GGUF model: {MODEL_PATH}")
+        try:
+            _llm = Llama(
+                model_path=MODEL_PATH,
+                n_ctx=4096,
+                n_threads=6,
+                n_batch=512,
+                verbose=False
+            )
+            logger.info(f"✓ Loaded GGUF model: {MODEL_PATH}")
+        except Exception as e:
+            logger.warning(f"Failed to load GGUF model, will use Ollama instead: {e}")
+            _llm = None
     else:
-        logger.error(f"Model file missing: {MODEL_PATH}")
+        logger.info(f"GGUF model file not found at {MODEL_PATH}, will use Ollama instead")
 
+except ImportError:
+    logger.info("llama-cpp-python not installed, will use Ollama instead")
+    _llm = None
 except Exception as e:
-    logger.exception("Failed to load llama_cpp model: %s", str(e))
+    logger.warning(f"Failed to initialize llama_cpp: {e}, will use Ollama instead")
     _llm = None
 
 
 class OllamaHandler:
+    """Local GGUF model handler (fallback if Ollama is not available)"""
     def __init__(self):
         self.model = _llm
 
@@ -55,5 +63,5 @@ class OllamaHandler:
             return str(output).strip()
 
         except Exception as e:
-            logger.exception("Generation error:", e)
+            logger.exception("GGUF generation error: %s", e)
             return None

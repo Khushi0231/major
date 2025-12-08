@@ -26,55 +26,52 @@ class LLMManager:
             if response.status_code == 200:
                 models = response.json().get("models", [])
                 if models:
-                    # Try to find mistral or use first available
-                    mistral_models = [m for m in models if "mistral" in m.get("name", "").lower()]
-                    if mistral_models:
-                        self.ollama_model = mistral_models[0]["name"]
-                    else:
-                        # Try common model names
-                        common_models = ["mistral:7b", "llama2", "llama3", "phi"]
-                        found = False
-                        for common in common_models:
-                            if any(common.split(":")[0] in m.get("name", "").lower() for m in models):
-                                self.ollama_model = common
-                                found = True
+                    # Filter out embedding-only models
+                    chat_models = [m for m in models if m.get("name", "").lower() not in ["nomic-embed-text:latest"]]
+                    
+                    if chat_models:
+                        # Try to find best model in priority order
+                        priority_models = ["llama3.1", "llama3", "mistral", "phi", "neural-chat"]
+                        best_model = None
+                        
+                        for priority in priority_models:
+                            candidates = [m for m in chat_models if priority in m.get("name", "").lower()]
+                            if candidates:
+                                # Use the full model name from the list
+                                best_model = candidates[0]["name"]
                                 break
-                        if not found:
-                            self.ollama_model = models[0]["name"]
-                    self.ollama_available = True
-                    logger.info(f"Ollama available with model: {self.ollama_model}")
-                else:
-                    # No models, try to pull mistral
-                    logger.info("Ollama available but no models. Attempting to pull mistral:7b...")
-                    try:
-                        pull_response = requests.post(
-                            f"{self.ollama_base_url}/api/pull",
-                            json={"name": "mistral:7b"},
-                            timeout=300  # 5 minutes for model download
-                        )
-                        if pull_response.status_code == 200:
-                            self.ollama_model = "mistral:7b"
-                            self.ollama_available = True
-                            logger.info("Successfully pulled mistral:7b model")
-                    except:
-                        logger.warning("Could not pull model automatically")
+                        
+                        # If no priority match, use first chat model
+                        if not best_model:
+                            best_model = chat_models[0]["name"]
+                        
+                        self.ollama_model = best_model
+                        self.ollama_available = True
+                        logger.info(f"✓ Ollama available with model: {self.ollama_model}")
+                    else:
+                        logger.warning("⚠ Ollama has no chat models (only embeddings)")
         except Exception as e:
             logger.debug(f"Ollama not available: {e}")
             self.ollama_available = False
         
         # Check local LLM
         local_available = self.local_llm.is_available()
+        if local_available:
+            logger.info("✓ Local GGUF model available")
         
-        # Prefer Ollama if both available (usually faster)
+        # Prefer Ollama if both available (usually more reliable)
         if self.ollama_available:
             self.preferred_backend = "ollama"
-            logger.info("Using Ollama as primary LLM backend")
+            logger.info("→ Using Ollama as primary LLM backend")
         elif local_available:
             self.preferred_backend = "local"
-            logger.info("Using local llama-cpp as LLM backend")
+            logger.info("→ Using local GGUF model as LLM backend")
         else:
             self.preferred_backend = None
-            logger.warning("No LLM backend available")
+            logger.warning("✗ No LLM backend available! Please:")
+            logger.warning("  1. Install Ollama from https://ollama.ai")
+            logger.warning("  2. Run: ollama pull mistral:7b")
+            logger.warning("  3. Make sure Ollama is running on port 11434")
     
     def is_available(self) -> bool:
         """Check if any LLM backend is available"""
@@ -82,39 +79,32 @@ class LLMManager:
     
     def generate(self, prompt: str, max_tokens: int = 512, temperature: float = 0.7) -> Optional[str]:
         """
-        Generate response using fastest available backend.
-        Uses concurrent requests to get the fastest response.
+        Generate response using available backend.
+        Tries local first (faster/more reliable), then Ollama.
         """
         if not self.is_available():
+            logger.warning("No LLM backend available!")
             return None
         
-        import concurrent.futures
+        # Try local first (usually faster and more reliable)
+        if self.local_llm.is_available():
+            try:
+                result = self._generate_local(prompt, max_tokens, temperature)
+                if result:
+                    return result
+            except Exception as e:
+                logger.warning(f"Local LLM failed, trying Ollama: {e}")
         
-        # Try both backends concurrently and return the first result
-        with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
-            futures = {}
-            
-            # Start Ollama if available
-            if self.ollama_available:
-                futures['ollama'] = executor.submit(self._generate_ollama, prompt, max_tokens, temperature)
-            
-            # Start local LLM if available
-            if self.local_llm.is_available():
-                futures['local'] = executor.submit(self._generate_local, prompt, max_tokens, temperature)
-            
-            # Wait for first successful result
-            for future in concurrent.futures.as_completed(futures.values(), timeout=60):
-                try:
-                    result = future.result(timeout=0.1)
-                    if result:
-                        # Cancel other futures
-                        for f in futures.values():
-                            f.cancel()
-                        return result
-                except Exception as e:
-                    logger.debug(f"One backend failed: {e}")
-                    continue
+        # Fall back to Ollama
+        if self.ollama_available:
+            try:
+                result = self._generate_ollama(prompt, max_tokens, temperature)
+                if result:
+                    return result
+            except Exception as e:
+                logger.warning(f"Ollama failed: {e}")
         
+        logger.error("All LLM backends failed")
         return None
     
     def _generate_ollama(self, prompt: str, max_tokens: int, temperature: float) -> Optional[str]:

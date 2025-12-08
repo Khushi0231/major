@@ -1,0 +1,17 @@
+/* App.tsx Component Styles */
+
+/* Override any component-specific behavior if needed */
+
+.content {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .top-bar {
+    order: -1;
+  }
+}

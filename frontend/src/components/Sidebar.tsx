@@ -1,129 +1,89 @@
 import React from "react";
 
 interface SidebarProps {
-  active: string;
-  setActive: (tab: "chat" | "docs" | "quiz" | "settings") => void;
-  theme: "dark" | "light";
-  setTheme: (theme: "dark" | "light") => void;
-  status: "online" | "offline";
+  activeTab: string;
+  onTabChange: (tab: "chat" | "docs" | "quiz" | "settings") => void;
   sessions: { id: string; title: string; timestamp: number }[];
   activeSessionId: string;
-  onSelectSession: (id: string) => void;
+  onSessionSelect: (id: string) => void;
+  onSessionDelete: (id: string) => void;
   onNewChat: () => void;
-  onClose?: () => void;
-  onOpenSettings: () => void;
+  status: "online" | "offline";
+  collapsed?: boolean;
 }
 
 export default function Sidebar({
-  active,
-  setActive,
-  theme,
-  setTheme,
-  status,
+  activeTab,
+  onTabChange,
   sessions,
   activeSessionId,
-  onSelectSession,
+  onSessionSelect,
+  onSessionDelete,
   onNewChat,
-  onClose,
-  onOpenSettings,
+  status,
+  collapsed = false,
 }: SidebarProps) {
   const menuItems = [
     { id: "chat", label: "Chat", icon: "💬" },
-    { id: "docs", label: "Documents", icon: "📚" },
+    { id: "docs", label: "Docs", icon: "📚" },
     { id: "quiz", label: "Quiz", icon: "📝" },
   ];
 
   return (
-    <div className="flex flex-col h-full bg-[#0c111f] text-gray-200">
+    <div className={`sidebar ${collapsed ? "collapsed" : ""}`}>
       {/* Header */}
-      <div className="p-4 border-b border-gray-900 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold text-sm">
-            D
-          </div>
-          <div>
-            <div className="text-xs text-gray-500 uppercase tracking-widest">Offline</div>
-            <h1 className="text-lg font-semibold text-white">DRAVIS</h1>
-          </div>
-        </div>
-        {onClose && (
+      <div className="sidebar-header">
+        {collapsed ? "D" : "DRAVIS"}
+      </div>
+
+      {/* Navigation Tabs */}
+      <div className="sidebar-nav">
+        {menuItems.map((item) => (
           <button
-            onClick={onClose}
-            className="p-2 hover:bg-gray-900 rounded-lg transition-colors text-gray-400"
-            title="Collapse sidebar"
+            key={item.id}
+            onClick={() => onTabChange(item.id as "chat" | "docs" | "quiz" | "settings")}
+            className={`${activeTab === item.id ? "active" : ""}`}
+            title={item.label}
           >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
+            {collapsed ? item.icon : item.label}
           </button>
-        )}
+        ))}
       </div>
 
-      {/* Actions */}
-      <div className="p-4 border-b border-gray-900 space-y-3">
-        <button
-          onClick={onNewChat}
-          className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-blue-600 text-white font-medium hover:bg-blue-500 transition-colors"
-        >
-          <span>＋</span> New chat
-        </button>
-        <button
-          onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-          className="w-full flex items-center justify-between px-4 py-2.5 rounded-lg bg-gray-900 text-sm text-gray-300 hover:bg-gray-800 transition-colors"
-        >
-          <span>Theme</span>
-          <span>{theme === "dark" ? "🌙 Dark" : "☀️ Light"}</span>
-        </button>
-      </div>
+      {/* New Chat Button */}
+      <button className="new-chat-btn" onClick={onNewChat} title="New Chat">
+        {collapsed ? "+" : "+ New Chat"}
+      </button>
 
-      {/* Recent chats */}
-      <div className="flex-1 overflow-y-auto px-3 py-4 space-y-2">
-        <div className="text-xs uppercase tracking-wider text-gray-500 px-2 mb-2">Recent Chats</div>
+      {/* Sessions List */}
+      <div className="sessions-list">
         {sessions.map((session) => (
           <button
             key={session.id}
-            onClick={() => {
-              onSelectSession(session.id);
-              setActive("chat");
-            }}
-            className={`w-full text-left px-3 py-2.5 rounded-lg transition-all ${
-              session.id === activeSessionId
-                ? "bg-gray-900 text-white border border-gray-800"
-                : "text-gray-400 hover:bg-gray-900/60"
-            }`}
+            className={`session-item ${activeSessionId === session.id ? "active" : ""}`}
+            onClick={() => onSessionSelect(session.id)}
+            title={session.title || "New chat"}
           >
-            <div className="text-sm font-medium truncate">{session.title || "New chat"}</div>
-            <div className="text-[11px] text-gray-500">Offline • {new Date(session.timestamp).toLocaleTimeString()}</div>
+            {!collapsed && (
+              <>
+                <span className="session-title">
+                  {session.title || "New chat"}
+                </span>
+                <button
+                  className="session-delete"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onSessionDelete(session.id);
+                  }}
+                  title="Delete session"
+                >
+                  ✕
+                </button>
+              </>
+            )}
+            {collapsed && "•"}
           </button>
         ))}
-        {sessions.length === 0 && (
-          <div className="text-xs text-gray-500 px-3 py-6 text-center bg-gray-900/40 rounded-lg">
-            No chats yet
-          </div>
-        )}
-      </div>
-
-      {/* Footer */}
-      <div className="p-4 border-t border-gray-900 space-y-3">
-        <div className="flex items-center justify-between text-xs text-gray-500">
-          <div className="flex items-center gap-2">
-            <span
-              className={`w-2 h-2 rounded-full ${status === "online" ? "bg-green-400" : "bg-gray-600"}`}
-            />
-            <span>{status === "online" ? "Connected" : "Offline mode"}</span>
-          </div>
-          <span className="text-gray-600">v1.0</span>
-        </div>
-        <button
-          onClick={() => {
-            setActive("settings");
-            onOpenSettings();
-          }}
-          className="w-full flex items-center justify-between px-4 py-2.5 rounded-lg bg-gray-900 hover:bg-gray-800 text-sm text-gray-300 transition-colors"
-        >
-          <span>Profile & Security</span>
-          <span>⚙️</span>
-        </button>
       </div>
     </div>
   );
