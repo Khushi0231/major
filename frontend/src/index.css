@@ -79,7 +79,23 @@ body {
 .sidebar.collapsed {
   width: 70px;
   padding: 12px 8px;
-  gap: 12px;
+  gap: 16px;
+  align-items: center;
+  justify-content: flex-start;
+}
+
+.sidebar-header-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.sidebar.collapsed .sidebar-header-container {
+  width: 100%;
+  justify-content: center;
+  gap: 0;
+  position: relative;
 }
 
 .sidebar-header {
@@ -93,12 +109,47 @@ body {
 
 .sidebar.collapsed .sidebar-header {
   font-size: 18px;
-  margin-bottom: 4px;
+  margin-bottom: 0;
+  text-align: center;
+}
+
+.sidebar-collapse-btn {
+  background: none;
+  border: none;
+  color: var(--text-primary);
+  font-size: 16px;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: all 0.2s;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sidebar.collapsed .sidebar-collapse-btn {
+  position: static;
+  width: auto;
+}
+
+.sidebar-collapse-btn:hover {
+  background: var(--bg-tertiary);
+  opacity: 0.8;
+}
+
+.sidebar-collapse-btn:active {
+  transform: scale(0.95);
 }
 
 .sidebar-nav {
   display: flex;
   gap: 8px;
+  width: 100%;
+}
+
+.sidebar.collapsed .sidebar-nav {
+  flex-direction: column;
 }
 
 .sidebar-nav button {
@@ -117,8 +168,10 @@ body {
 }
 
 .sidebar.collapsed .sidebar-nav button {
-  padding: 6px 4px;
-  font-size: 11px;
+  flex: none;
+  width: 100%;
+  padding: 8px 6px;
+  font-size: 10px;
 }
 
 .sidebar-nav button.active {
@@ -144,10 +197,11 @@ body {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  font-size: 14px;
 }
 
 .sidebar.collapsed .new-chat-btn {
-  padding: 8px 4px;
+  padding: 10px 6px;
   font-size: 12px;
 }
 
@@ -180,9 +234,11 @@ body {
 }
 
 .sidebar.collapsed .session-item {
-  padding: 8px 4px;
-  font-size: 10px;
+  width: 100%;
+  padding: 8px 6px;
+  font-size: 9px;
   justify-content: center;
+  min-height: 32px;
 }
 
 .session-item:hover {

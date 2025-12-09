@@ -266,50 +266,30 @@ async def check_pin_exists():
     return {"exists": pin_exists(Config.PIN_HASH_FILE)}
 
 
+@app.get("/api/health")
+def health_check():
+    return {
+        "status": "ok",
+        "message": "Backend running",
+        "version": Config.API_VERSION
+    }
+
+@app.post("/api/pin/verify")
+async def verify_pin_route(req: PINVerifyRequest):
+    if verify_pin(Config.PIN_HASH_FILE, req.pin):
+        return {"verified": True}
+    return {"verified": False, "error": "Invalid PIN"}
+
+@app.post("/api/pin/set")
+async def set_pin_route(req: PINRequest):
+    if not req.pin or len(req.pin) < 4:
+        return {"success": False, "error": "PIN must be at least 4 digits"}
+
+    save_pin_hash(Config.PIN_HASH_FILE, req.pin)
+    return {"success": True, "message": "PIN saved successfully"}
+
+
 if __name__ == "__main__":
     import uvicorn
     logger.info(f"Starting DRAVIS backend on {Config.HOST}:{Config.PORT}")
     uvicorn.run(app, host=Config.HOST, port=Config.PORT)
-
-@app.get("/api/health")
-def health_check():
-    return {
-        "status": "ok",
-        "message": "Backend running",
-        "version": Config.API_VERSION
-    }
-
-@app.post("/api/pin/verify")
-async def verify_pin_route(req: PINVerifyRequest):
-    if verify_pin(Config.PIN_HASH_FILE, req.pin):
-        return {"success": True}
-    return {"success": False, "error": "Invalid PIN"}
-
-@app.post("/api/pin/set")
-async def set_pin_route(req: PINRequest):
-    if not req.pin or len(req.pin) < 4:
-        return {"success": False, "error": "PIN must be at least 4 digits"}
-
-    save_pin_hash(Config.PIN_HASH_FILE, req.pin)
-    return {"success": True, "message": "PIN saved successfully"}
-@app.get("/api/health")
-def health_check():
-    return {
-        "status": "ok",
-        "message": "Backend running",
-        "version": Config.API_VERSION
-    }
-
-@app.post("/api/pin/verify")
-async def verify_pin_route(req: PINVerifyRequest):
-    if verify_pin(Config.PIN_HASH_FILE, req.pin):
-        return {"success": True}
-    return {"success": False, "error": "Invalid PIN"}
-
-@app.post("/api/pin/set")
-async def set_pin_route(req: PINRequest):
-    if not req.pin or len(req.pin) < 4:
-        return {"success": False, "error": "PIN must be at least 4 digits"}
-
-    save_pin_hash(Config.PIN_HASH_FILE, req.pin)
-    return {"success": True, "message": "PIN saved successfully"}

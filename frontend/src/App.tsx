@@ -132,6 +132,7 @@ function App() {
           onNewChat={handleNewChat}
           status={status}
           collapsed={!sidebarOpen}
+          onCollapsedChange={(collapsed) => setSidebarOpen(!collapsed)}
         />
         
         <div className="main-container">

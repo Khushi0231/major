@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 
 interface SidebarProps {
   activeTab: string;
@@ -10,6 +10,7 @@ interface SidebarProps {
   onNewChat: () => void;
   status: "online" | "offline";
   collapsed?: boolean;
+  onCollapsedChange?: (collapsed: boolean) => void;
 }
 
 export default function Sidebar({
@@ -22,6 +23,7 @@ export default function Sidebar({
   onNewChat,
   status,
   collapsed = false,
+  onCollapsedChange,
 }: SidebarProps) {
   const menuItems = [
     { id: "chat", label: "Chat", icon: "💬" },
@@ -31,9 +33,18 @@ export default function Sidebar({
 
   return (
     <div className={`sidebar ${collapsed ? "collapsed" : ""}`}>
-      {/* Header */}
-      <div className="sidebar-header">
-        {collapsed ? "D" : "DRAVIS"}
+      {/* Header with Collapse Button */}
+      <div className="sidebar-header-container">
+        <div className="sidebar-header">
+          {collapsed ? "D" : "DRAVIS"}
+        </div>
+        <button
+          className="sidebar-collapse-btn"
+          onClick={() => onCollapsedChange?.(!collapsed)}
+          title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+        >
+          {collapsed ? "→" : "←"}
+        </button>
       </div>
 
       {/* Navigation Tabs */}

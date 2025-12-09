@@ -40,18 +40,14 @@ export default function SettingsPanel({
     }
 
     try {
-      const result = await setPIN(pinInput);
-      if (result.success) {
-        setMessage("PIN set successfully!");
-        setPinInput("");
-        setConfirmPin("");
-        setPinExists(true);
-        setPinMode("none");
-      } else {
-        setMessage("Failed to set PIN");
-      }
+      await setPIN(pinInput);
+      setMessage("PIN set successfully!");
+      setPinInput("");
+      setConfirmPin("");
+      setPinExists(true);
+      setPinMode("none");
     } catch (error) {
-      setMessage("Error setting PIN");
+      setMessage("Error setting PIN: " + (error instanceof Error ? error.message : "Unknown error"));
     }
   };
 
@@ -63,7 +59,7 @@ export default function SettingsPanel({
 
     try {
       const result = await verifyPIN(pinInput);
-      if (result.verified) {
+      if (result && result.verified) {
         setMessage("PIN verified!");
         setPinInput("");
         setPinMode("none");
@@ -72,7 +68,7 @@ export default function SettingsPanel({
         setPinInput("");
       }
     } catch (error) {
-      setMessage("Error verifying PIN");
+      setMessage("Error verifying PIN: " + (error instanceof Error ? error.message : "Unknown error"));
     }
   };
 
