@@ -19,7 +19,7 @@ export async function sendMessage(
   return res.json();
 }
 
-export async function uploadFile(file: File): Promise<{ chunks: number }> {
+export async function uploadFile(file: File): Promise<{ chunks: number; success: boolean }> {
   const formData = new FormData();
   formData.append("file", file);
 
@@ -29,14 +29,20 @@ export async function uploadFile(file: File): Promise<{ chunks: number }> {
   });
 
   if (!res.ok) throw new Error("Upload failed");
-  return res.json();
+  const data = await res.json();
+  return { chunks: data.chunks, success: data.success };
 }
 
-export async function listDocs(): Promise<Array<{ name: string; chunks: number }>> {
+export async function listDocs(): Promise<Array<{ document_id: string; document_name: string; upload_time: string; chunk_count: number }>> {
   const res = await fetch(`${API_BASE}/documents`);
   if (!res.ok) throw new Error("Failed to list documents");
   const data = await res.json();
-  return data.documents || [];
+  return (data.documents || []).map((doc: any) => ({
+    document_id: doc.document_id,
+    document_name: doc.document_name,
+    upload_time: doc.upload_time,
+    chunk_count: doc.chunk_count
+  }));
 }
 
 export async function deleteDoc(docName: string): Promise<void> {
@@ -67,7 +73,7 @@ export async function generateQuiz(
   return res.json();
 }
 
-export async function setPIN(pin: string): Promise<void> {
+export async function setPIN(pin: string): Promise<{ success: boolean }> {
   const res = await fetch(`${API_BASE}/pin/set`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -75,6 +81,7 @@ export async function setPIN(pin: string): Promise<void> {
   });
 
   if (!res.ok) throw new Error("Failed to set PIN");
+  return res.json();
 }
 
 export async function verifyPIN(pin: string): Promise<{ verified: boolean }> {

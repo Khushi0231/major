@@ -239,8 +239,51 @@ async def speech_to_text(audio_file: UploadFile = File(...), language: Optional[
         raise HTTPException(500, f"Speech-to-text failed: {str(e)}")
 
 
-@app.post("/api/quiz")
-async def generate_quiz(req: QuizRequest):
+@app.get("/api/documents")
+async def list_documents():
+    try:
+        docs = chroma_store.get_document_info()
+        formatted_docs = [
+            {
+                "document_id": doc["document_id"],
+                "document_name": doc["document_name"],
+                "upload_time": doc["upload_time"],
+                "chunk_count": doc["chunk_count"]
+            }
+            for doc in docs
+        ]
+        return {"documents": formatted_docs}
+    except Exception as e:
+        logger.error(f"Error listing documents: {e}")
+        raise HTTPException(500, "Failed to list documents")
+
+
+@app.delete("/api/documents/{doc_name}")
+async def delete_document(doc_name: str):
+    try:
+        # Get all documents to find the one with matching name
+        all_docs = chroma_store.get_document_info()
+        target_doc = None
+        for doc in all_docs:
+            if doc["document_name"] == doc_name or doc["document_id"] == doc_name:
+                target_doc = doc
+                break
+        
+        if not target_doc:
+            raise HTTPException(404, f"Document {doc_name} not found")
+        
+        chroma_store.delete_document(target_doc["document_id"])
+        return {"success": True, "message": f"Deleted {doc_name}"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error deleting document: {e}")
+        raise HTTPException(500, "Failed to delete document")
+
+
+@app.post("/api/quiz/generate")
+async def generate_quiz_v2(req: QuizRequest):
+    """Generate quiz from topic or documents"""
     try:
         context = None
         if req.use_documents:
@@ -258,7 +301,7 @@ async def generate_quiz(req: QuizRequest):
             context=context
         )
 
-        return {"success": True, "quiz": quiz}
+        return {"questions": quiz.get("questions", [])}
 
     except Exception as e:
         logger.error(f"Quiz error: {e}")
@@ -290,7 +333,7 @@ async def set_pin_route(req: PINRequest):
         return {"success": False, "error": "PIN must be at least 4 digits"}
 
     save_pin_hash(Config.PIN_HASH_FILE, req.pin)
-    return {"success": True, "message": "PIN saved successfully"}
+    return {"success": True, "verified": True, "message": "PIN saved successfully"}
 
 
 if __name__ == "__main__":
