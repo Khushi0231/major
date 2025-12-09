@@ -291,5 +291,21 @@ async def set_pin_route(req: PINRequest):
 
 if __name__ == "__main__":
     import uvicorn
+    import asyncio
+    import signal
+    import sys
+    
     logger.info(f"Starting DRAVIS backend on {Config.HOST}:{Config.PORT}")
-    uvicorn.run(app, host=Config.HOST, port=Config.PORT)
+    
+    # Windows asyncio signal handling
+    if sys.platform == "win32":
+        asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+    
+    try:
+        uvicorn.run(app, host=Config.HOST, port=Config.PORT)
+    except KeyboardInterrupt:
+        logger.info("Backend shutdown requested")
+        sys.exit(0)
+    except Exception as e:
+        logger.error(f"Backend error: {e}")
+        sys.exit(1)
