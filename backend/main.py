@@ -55,7 +55,7 @@ app.add_middleware(
 )
 
 # Initialize components
-llm = LLMManager()
+llm = LLMManager(Config.LLM_CONFIG)
 embedding_manager = EmbeddingManager()
 chroma_store = ChromaStore(persist_directory=Config.CHROMA_PATH)
 db_manager = SQLiteManager(db_path=Config.DB_PATH)

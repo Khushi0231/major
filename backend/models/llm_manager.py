@@ -2,6 +2,7 @@
 from typing import List, Optional, Dict, Any
 from .providers import LLMProvider, OllamaProvider, OpenAIProvider, MockProvider
 import logging
+import asyncio
 
 logger = logging.getLogger(__name__)
 
@@ -49,8 +50,66 @@ class LLMManager:
         
         logger.info(f"Initialized {len(self.providers)} LLM providers")
     
-    async def generate(self, prompt: str, **kwargs) -> dict:
+    def is_available(self) -> bool:
+        """Check if any provider is available (synchronous)"""
+        try:
+            loop = asyncio.get_event_loop()
+        except RuntimeError:
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+        
+        return loop.run_until_complete(self._async_is_available())
+    
+    async def _async_is_available(self) -> bool:
+        """Check if any provider is available"""
+        for provider in self.providers:
+            try:
+                is_available = await provider.is_available()
+                if is_available:
+                    return True
+            except:
+                continue
+        return len(self.providers) > 0
+    
+    def generate(self, prompt: str, **kwargs) -> Optional[str]:
+        """Generate response using first available provider (synchronous)"""
+        try:
+            loop = asyncio.get_event_loop()
+        except RuntimeError:
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+        
+        result = loop.run_until_complete(self._async_generate(prompt, **kwargs))
+        return result
+    
+    async def _async_generate(self, prompt: str, **kwargs) -> Optional[str]:
         """Generate response using first available provider"""
+        errors = []
+        
+        for provider in self.providers:
+            try:
+                is_available = await provider.is_available()
+                if is_available:
+                    logger.info(f"Using provider: {provider.name}")
+                    response = await provider.generate(prompt, **kwargs)
+                    return response
+                else:
+                    msg = f"{provider.name} not available"
+                    logger.debug(msg)
+                    errors.append(msg)
+            except Exception as e:
+                msg = f"{provider.name}: {str(e)}"
+                logger.warning(f"Provider failed: {msg}")
+                errors.append(msg)
+                continue
+        
+        # No provider worked
+        error_msg = f"All LLM providers failed. Errors: {'; '.join(errors)}"
+        logger.error(error_msg)
+        return None
+    
+    async def generate_async(self, prompt: str, **kwargs) -> dict:
+        """Generate response using first available provider (async version)"""
         errors = []
         
         for provider in self.providers:
