@@ -33,7 +33,7 @@ export default function QuizPanel() {
         useDocuments
       );
 
-      if (result && result.questions && result.questions.length > 0) {
+      if (result?.questions?.length > 0) {
         setQuestions(result.questions);
       } else {
         setQuestions([]);

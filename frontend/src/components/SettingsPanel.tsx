@@ -4,11 +4,13 @@ import { setPIN, verifyPIN, checkPINExists } from "../utils/api";
 interface SettingsPanelProps {
   theme: "dark" | "light";
   setTheme: (t: "dark" | "light") => void;
+  onLockApp?: () => void;
 }
 
 export default function SettingsPanel({
   theme,
-  setTheme
+  setTheme,
+  // onLockApp is available but not used yet
 }: SettingsPanelProps) {
   const [pinExists, setPinExists] = useState(false);
   const [pinInput, setPinInput] = useState("");

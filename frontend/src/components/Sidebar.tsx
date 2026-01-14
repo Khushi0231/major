@@ -22,6 +22,7 @@ export default function Sidebar({
   collapsed = false,
   onCollapsedChange = () => {},
 }: SidebarProps) {
+  // status is now available from props even if unused
   const menuItems = [
     { id: "chat", label: "Chat", icon: "💬" },
     { id: "docs", label: "Docs", icon: "📚" },
