@@ -101,6 +101,19 @@ export async function checkPINExists(): Promise<{ exists: boolean }> {
   return res.json();
 }
 
+export async function speechToText(audioBlob: Blob): Promise<{ text: string }> {
+  const formData = new FormData();
+  formData.append("audio", audioBlob);
+
+  const res = await fetch(`${API_BASE}/speech/transcribe`, {
+    method: "POST",
+    body: formData,
+  });
+
+  if (!res.ok) throw new Error("Speech-to-text failed");
+  return res.json();
+}
+
 export async function exportChatHistory(): Promise<void> {
   const res = await fetch(`${API_BASE}/chat/export`, {
     method: "POST",

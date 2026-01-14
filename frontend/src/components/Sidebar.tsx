@@ -20,7 +20,7 @@ export default function Sidebar({
   onSessionDelete,
   onNewChat,
   collapsed = false,
-  onCollapsedChange,
+  onCollapsedChange = () => {},
 }: SidebarProps) {
   const menuItems = [
     { id: "chat", label: "Chat", icon: "💬" },

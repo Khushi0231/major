@@ -33,8 +33,10 @@ export default function QuizPanel() {
         useDocuments
       );
 
-      if (result.questions && result.questions.length > 0) {
+      if (result && result.questions && result.questions.length > 0) {
         setQuestions(result.questions);
+      } else {
+        setQuestions([]);
       }
     } catch (error) {
       console.error("Quiz generation error:", error);

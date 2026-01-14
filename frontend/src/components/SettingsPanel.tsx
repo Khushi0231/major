@@ -3,12 +3,12 @@ import { setPIN, verifyPIN, checkPINExists } from "../utils/api";
 
 interface SettingsPanelProps {
   theme: "dark" | "light";
-  onThemeChange: (t: "dark" | "light") => void;
+  setTheme: (t: "dark" | "light") => void;
 }
 
 export default function SettingsPanel({
   theme,
-  onThemeChange
+  setTheme
 }: SettingsPanelProps) {
   const [pinExists, setPinExists] = useState(false);
   const [pinInput, setPinInput] = useState("");
@@ -84,7 +84,7 @@ export default function SettingsPanel({
             className={`flex-1 px-4 py-3 rounded-lg font-medium transition-all ${
               theme === "dark" ? "bg-blue-600 text-white" : "bg-gray-800/50 text-gray-400 hover:bg-gray-800"
             }`}
-            onClick={() => onThemeChange("dark")}
+            onClick={() => setTheme("dark")}
           >
             🌙 Dark
           </button>
@@ -92,7 +92,7 @@ export default function SettingsPanel({
             className={`flex-1 px-4 py-3 rounded-lg font-medium transition-all ${
               theme === "light" ? "bg-blue-600 text-white" : "bg-gray-800/50 text-gray-400 hover:bg-gray-800"
             }`}
-            onClick={() => onThemeChange("light")}
+            onClick={() => setTheme("light")}
           >
             ☀️ Light
           </button>

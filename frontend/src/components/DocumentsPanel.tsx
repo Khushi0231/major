@@ -40,7 +40,7 @@ export default function DocumentsPanel({
     setUploading(true);
     try {
       const res = await uploadFile(selected);
-      if (res.success) {
+      if (res && res.success) {
         await reload();
         setStatus("online");
         setSelected(null);

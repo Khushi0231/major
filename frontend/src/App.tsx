@@ -175,7 +175,7 @@ function App() {
             {activeTab === 'settings' && (
               <SettingsPanel
                 theme={theme}
-                onThemeChange={setTheme}
+                setTheme={setTheme}
               />
             )}
           </div>
