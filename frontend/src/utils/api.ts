@@ -19,7 +19,7 @@ export async function sendMessage(
   return res.json();
 }
 
-export async function uploadFile(file: File): Promise<{ chunks: number; success: boolean }> {
+export async function uploadFile(file: File): Promise<{ chunks: number; success?: boolean }> {
   const formData = new FormData();
   formData.append("file", file);
 
@@ -30,7 +30,7 @@ export async function uploadFile(file: File): Promise<{ chunks: number; success:
 
   if (!res.ok) throw new Error("Upload failed");
   const data = await res.json();
-  return { chunks: data.chunks, success: data.success };
+  return { chunks: data.chunks, success: data.success !== false };
 }
 
 export async function listDocs(): Promise<Array<{ document_id: string; document_name: string; upload_time: string; chunk_count: number }>> {

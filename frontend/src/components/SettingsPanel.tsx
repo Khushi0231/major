@@ -1,13 +1,15 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { setPIN, verifyPIN, checkPINExists } from "../utils/api";
+
+interface SettingsPanelProps {
+  theme: "dark" | "light";
+  onThemeChange: (t: "dark" | "light") => void;
+}
 
 export default function SettingsPanel({
   theme,
-  setTheme
-}: {
-  theme: "dark" | "light";
-  setTheme: (t: "dark" | "light") => void;
-}) {
+  onThemeChange
+}: SettingsPanelProps) {
   const [pinExists, setPinExists] = useState(false);
   const [pinInput, setPinInput] = useState("");
   const [confirmPin, setConfirmPin] = useState("");
@@ -82,7 +84,7 @@ export default function SettingsPanel({
             className={`flex-1 px-4 py-3 rounded-lg font-medium transition-all ${
               theme === "dark" ? "bg-blue-600 text-white" : "bg-gray-800/50 text-gray-400 hover:bg-gray-800"
             }`}
-            onClick={() => setTheme("dark")}
+            onClick={() => onThemeChange("dark")}
           >
             🌙 Dark
           </button>
@@ -90,7 +92,7 @@ export default function SettingsPanel({
             className={`flex-1 px-4 py-3 rounded-lg font-medium transition-all ${
               theme === "light" ? "bg-blue-600 text-white" : "bg-gray-800/50 text-gray-400 hover:bg-gray-800"
             }`}
-            onClick={() => setTheme("light")}
+            onClick={() => onThemeChange("light")}
           >
             ☀️ Light
           </button>

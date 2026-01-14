@@ -59,11 +59,9 @@ export default function DocumentsPanel({
     if (!confirm(`Delete "${docName}"?`)) return;
     
     try {
-      const res = await deleteDoc(docId);
-      if (res.success) {
-        await reload();
-        setStatus("online");
-      }
+      await deleteDoc(docId);
+      await reload();
+      setStatus("online");
     } catch (error) {
       console.error("Delete error:", error);
     }

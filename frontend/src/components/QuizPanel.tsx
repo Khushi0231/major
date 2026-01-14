@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { generateQuiz } from "../utils/api";
 
 interface QuizQuestion {
@@ -26,16 +26,15 @@ export default function QuizPanel() {
     setSelectedAnswers({});
 
     try {
-      const result = await generateQuiz({
+      const result = await generateQuiz(
         topic,
-        num_questions: 5,
         difficulty,
-        quiz_type: quizType,
-        use_documents: useDocuments
-      });
+        quizType,
+        useDocuments
+      );
 
-      if (result.success && result.quiz?.questions) {
-        setQuestions(result.quiz.questions);
+      if (result.questions && result.questions.length > 0) {
+        setQuestions(result.questions);
       }
     } catch (error) {
       console.error("Quiz generation error:", error);

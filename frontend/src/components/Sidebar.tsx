@@ -1,5 +1,3 @@
-import React, { useState } from "react";
-
 interface SidebarProps {
   activeTab: string;
   onTabChange: (tab: "chat" | "docs" | "quiz" | "settings") => void;
@@ -21,7 +19,6 @@ export default function Sidebar({
   onSessionSelect,
   onSessionDelete,
   onNewChat,
-  status,
   collapsed = false,
   onCollapsedChange,
 }: SidebarProps) {

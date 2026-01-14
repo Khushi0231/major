@@ -1,5 +1,4 @@
-import React, { useState, useRef } from "react";
-import { speechToText } from "../utils/api";
+import { useState, useRef } from "react";
 
 export default function VoiceControls() {
   const [isRecording, setIsRecording] = useState(false);
@@ -21,17 +20,12 @@ export default function VoiceControls() {
       };
 
       mediaRecorder.onstop = async () => {
-        const audioBlob = new Blob(audioChunksRef.current, { type: "audio/wav" });
         setIsProcessing(true);
         
         try {
-          const audioFile = new File([audioBlob], "recording.wav", { type: "audio/wav" });
-          const result = await speechToText(audioFile);
-          
-          if (result.success && result.text) {
-            // Could auto-fill chat input here
-            alert(`Transcribed: ${result.text}`);
-          }
+          // TODO: Implement speech-to-text once API is available
+          // For now, just show recording complete
+          alert("Recording completed");
         } catch (error) {
           console.error("STT error:", error);
         } finally {

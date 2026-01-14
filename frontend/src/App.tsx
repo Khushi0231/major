@@ -176,7 +176,6 @@ function App() {
               <SettingsPanel
                 theme={theme}
                 onThemeChange={setTheme}
-                onLockApp={() => setIsLocked(true)}
               />
             )}
           </div>
