@@ -329,11 +329,15 @@ async def verify_pin_route(req: PINVerifyRequest):
 
 @app.post("/api/pin/set")
 async def set_pin_route(req: PINRequest):
-    if not req.pin or len(req.pin) < 4:
-        return {"success": False, "error": "PIN must be at least 4 digits"}
+    if not req.pin or len(req.pin) != 4 or not req.pin.isdigit():
+        return {"success": False, "error": "PIN must be exactly 4 digits"}
 
-    save_pin_hash(Config.PIN_HASH_FILE, req.pin)
-    return {"success": True, "verified": True, "message": "PIN saved successfully"}
+    try:
+        save_pin_hash(req.pin, Config.PIN_HASH_FILE)
+        return {"success": True, "verified": True, "message": "PIN saved successfully"}
+    except Exception as e:
+        logger.error(f"Error saving PIN: {e}")
+        raise HTTPException(500, "Failed to save PIN")
 
 
 if __name__ == "__main__":

@@ -12,7 +12,7 @@ echo.
 
 REM Start Backend in a new window
 echo ✓ Starting Backend on port 8000...
-start "DRAVIS Backend" cmd /k "call venv\Scripts\activate.bat && python -m uvicorn backend.main:app --host 0.0.0.0 --port 8000"
+start "DRAVIS Backend" cmd /k "call backend\venv\Scripts\activate.bat && python -m uvicorn backend.main:app --host 0.0.0.0 --port 8000"
 
 REM Wait a bit for backend to start
 timeout /t 3 /nobreak
