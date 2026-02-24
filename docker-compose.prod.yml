@@ -1,0 +1,78 @@
+# ============================================================
+# DRAVIS — Production Docker Compose (for end users)
+# Users just: docker compose pull && docker compose up -d
+# Images are pre-built on GitHub Container Registry
+# ============================================================
+
+services:
+
+  ollama:
+    image: ollama/ollama:latest
+    container_name: dravis-ollama
+    restart: unless-stopped
+    volumes:
+      - ollama_data:/root/.ollama
+    ports:
+      - "11434:11434"
+    environment:
+      - OLLAMA_KEEP_ALIVE=24h
+    healthcheck:
+      test: ["CMD-SHELL", "ollama list || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  ollama-init:
+    image: ollama/ollama:latest
+    container_name: dravis-ollama-init
+    restart: "no"
+    depends_on:
+      ollama:
+        condition: service_healthy
+    entrypoint: ["sh", "-c", "ollama pull mistral"]
+    environment:
+      - OLLAMA_HOST=http://ollama:11434
+
+  backend:
+    image: ghcr.io/khushi0231/dravis-backend:latest
+    container_name: dravis-backend
+    restart: unless-stopped
+    depends_on:
+      ollama:
+        condition: service_healthy
+    environment:
+      - OLLAMA_ENABLED=true
+      - OLLAMA_BASE_URL=http://ollama:11434
+      - OLLAMA_MODEL=mistral
+      - OLLAMA_TIMEOUT=120
+      - MOCK_ENABLED=true
+      - API_HOST=0.0.0.0
+      - API_PORT=8000
+    volumes:
+      - chroma_data:/app/chroma_db
+      - dravis_data:/app/dravis_data
+    ports:
+      - "8000:8000"
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/')\""]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 40s
+
+  frontend:
+    image: ghcr.io/khushi0231/dravis-frontend:latest
+    container_name: dravis-frontend
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      - "80:80"
+      - "8080:80"
+
+volumes:
+  ollama_data:
+  chroma_data:
+  dravis_data:

@@ -94,39 +94,34 @@ User Browser (http://localhost)
 └─────────────────┘
 ```
 
-## 🔑 How the "No Large Files in Git" Problem Is Solved
+## 🔑 Distribution Architecture (No Large Files in Git)
 
 ```
-GitHub Repo (~50 MB)          Docker Hub              Ollama Registry
-┌─────────────────┐    ┌──────────────────┐    ┌──────────────────┐
-│ Source code only │    │ ollama/ollama    │    │ mistral:latest   │
-│ No model files  │    │ (pulled by       │    │ (pulled by       │
-│ No .gguf        │    │  docker-compose) │    │  ollama-init     │
-│ No node_modules │    │                  │    │  at first run)   │
-└─────────────────┘    └──────────────────┘    └──────────────────┘
-        │                       │                       │
-        └───────────────────────┴───────────────────────┘
-                    Combined at runtime by Docker
+GitHub Repo (~50 MB)     GitHub Container Registry     Ollama Registry
+┌──────────────────┐    ┌──────────────────────┐    ┌────────────────┐
+│ Source code       │    │ dravis-backend:latest │    │ mistral:latest │
+│ docker-compose    │───▶│ dravis-frontend:latest│    │ (~4.5 GB)      │
+│ GitHub Actions    │    │ (auto-built on push)  │    │ (pulled once)  │
+│ Installer scripts │    └──────────────────────┘    └────────────────┘
+└──────────────────┘              │                         │
+                                  ▼                         ▼
+                        User runs: docker compose up -d
+                        Everything downloads automatically
 ```
 
-## 📋 Install Flow (User Perspective)
+## 📋 User Install Flow
 
 ```
-1. User visits dravis.vercel.app
-2. Clicks "Download for Mac" → gets install-dravis.command
-3. Double-clicks the file
-4. Script:
-   a. Installs Homebrew (if needed)
-   b. Installs Docker Desktop (if needed)
-   c. Clones repo from GitHub
-   d. Runs docker compose up --build
-   e. Docker pulls ollama image (~500 MB, one time)
-   f. Docker builds backend image (~1 GB, one time)  
-   g. Docker builds frontend image (~200 MB, one time)
-   h. ollama-init pulls Mistral 7B (~4.5 GB, one time)
-   i. Opens http://localhost in browser
-5. DRAVIS is running. Fully offline from now on.
+1. Visit dravis.vercel.app → Click "Download for Mac/Win/Linux"
+2. Double-click downloaded file
+3. Script installs Docker (if needed)
+4. Script downloads docker-compose.prod.yml (1 KB)
+5. docker compose pull → pre-built images from ghcr.io (~1.5 GB)
+6. docker compose up → Ollama pulls Mistral 7B (~4.5 GB, first run only)
+7. Browser opens http://localhost → DRAVIS is ready
 ```
+
+No git clone. No build step. No source code needed. Just Docker.
 
 ## ⚙️ Tech Stack
 
