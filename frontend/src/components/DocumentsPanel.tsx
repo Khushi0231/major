@@ -4,8 +4,10 @@ import { uploadFile, listDocs, deleteDoc } from "../utils/api";
 interface Document {
   document_id: string;
   document_name: string;
-  upload_time: string;
+  file_size: number;
   chunk_count: number;
+  status: string;
+  created_at: string;
 }
 
 export default function DocumentsPanel({
@@ -36,7 +38,7 @@ export default function DocumentsPanel({
 
   async function onUpload() {
     if (!selected) return;
-    
+
     setUploading(true);
     try {
       const res = await uploadFile(selected);
@@ -57,7 +59,7 @@ export default function DocumentsPanel({
 
   async function onDelete(docId: string, docName: string) {
     if (!confirm(`Delete "${docName}"?`)) return;
-    
+
     try {
       await deleteDoc(docId);
       await reload();

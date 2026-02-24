@@ -54,7 +54,8 @@ function App() {
 
   const checkBackendHealth = async () => {
     try {
-      const response = await fetch('http://localhost:8000/');
+      const apiBase = import.meta.env.VITE_API_BASE || '';
+      const response = await fetch(`${apiBase}/api/health`);
       if (response.ok) {
         setStatus('online');
       } else {
@@ -134,10 +135,10 @@ function App() {
           collapsed={!sidebarOpen}
           onCollapsedChange={(collapsed) => setSidebarOpen(!collapsed)}
         />
-        
+
         <div className="main-container">
           <div className="top-bar">
-            <button 
+            <button
               className="menu-btn"
               onClick={() => setSidebarOpen(!sidebarOpen)}
             >
@@ -145,13 +146,13 @@ function App() {
             </button>
             <div className="top-bar-right">
               <span className={`status ${status}`}>{status === 'online' ? '🟢' : '🔴'}</span>
-              <button 
+              <button
                 className="theme-btn"
                 onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
               >
                 {theme === 'dark' ? '☀️' : '🌙'}
               </button>
-              <button 
+              <button
                 className="settings-btn"
                 onClick={() => setActiveTab('settings')}
               >
@@ -163,7 +164,7 @@ function App() {
           <div className="content">
             {activeTab === 'chat' && (
               <ChatPanel sessionId={activeSessionId} setStatus={setStatus} onFirstMessage={(title) => {
-                const updated = sessions.map(s => 
+                const updated = sessions.map(s =>
                   s.id === activeSessionId ? { ...s, title } : s
                 );
                 setSessions(updated);
@@ -176,7 +177,7 @@ function App() {
               <SettingsPanel
                 theme={theme}
                 setTheme={setTheme}
-                onLockApp={() => {}}
+                onLockApp={() => { }}
               />
             )}
           </div>

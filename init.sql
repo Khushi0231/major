@@ -1,0 +1,50 @@
+-- =============================================
+-- DRAVIS Enterprise - MySQL Initialization
+-- =============================================
+-- Each microservice owns its own tables.
+-- This file runs automatically on first MySQL start.
+
+USE dravis;
+
+-- ─── Auth Service Tables ─────────────────────
+CREATE TABLE IF NOT EXISTS auth_pins (
+    id          INT AUTO_INCREMENT PRIMARY KEY,
+    pin_hash    VARCHAR(64)  NOT NULL,
+    created_at  TIMESTAMP    DEFAULT CURRENT_TIMESTAMP,
+    updated_at  TIMESTAMP    DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- ─── Chat Service Tables ─────────────────────
+CREATE TABLE IF NOT EXISTS chat_messages (
+    id                  INT AUTO_INCREMENT PRIMARY KEY,
+    session_id          VARCHAR(64)  NOT NULL,
+    user_message        TEXT         NOT NULL,
+    assistant_response  TEXT         NOT NULL,
+    use_rag             BOOLEAN      DEFAULT FALSE,
+    mode                VARCHAR(20)  DEFAULT 'normal',
+    language            VARCHAR(10)  NULL,
+    provider            VARCHAR(50)  NULL,
+    created_at          TIMESTAMP    DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_session    (session_id),
+    INDEX idx_created    (created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS chat_settings (
+    setting_key   VARCHAR(100) PRIMARY KEY,
+    setting_value TEXT         NOT NULL,
+    updated_at    TIMESTAMP    DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- ─── Document Service Tables ─────────────────
+CREATE TABLE IF NOT EXISTS documents (
+    id             INT AUTO_INCREMENT PRIMARY KEY,
+    document_id    VARCHAR(36)  NOT NULL UNIQUE,
+    document_name  VARCHAR(255) NOT NULL,
+    file_path      VARCHAR(500) NULL,
+    file_size      INT          DEFAULT 0,
+    chunk_count    INT          DEFAULT 0,
+    status         VARCHAR(20)  DEFAULT 'processing',
+    created_at     TIMESTAMP    DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_doc_id  (document_id),
+    INDEX idx_status  (status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

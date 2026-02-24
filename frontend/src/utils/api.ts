@@ -1,131 +1,151 @@
-const API_BASE = "http://localhost:8000/api";
+// ─── DRAVIS Enterprise - API Client ─────────────────
+// All requests go through the Nginx Gateway.
+// In Docker: same origin (/).  In dev: configurable via env.
+
+const API_BASE = import.meta.env.VITE_API_BASE || "";
+
+// ─── Chat Service (/api/chat/) ──────────────────────
 
 export async function sendMessage(
   message: string,
   useDocuments: boolean,
-  mode: string
-): Promise<{ response: string }> {
-  const res = await fetch(`${API_BASE}/chat`, {
+  mode: string,
+  sessionId?: string,
+): Promise<{ response: string; language?: string; mode?: string; provider?: string }> {
+  const res = await fetch(`${API_BASE}/api/chat/send`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       message,
       use_documents: useDocuments,
       mode,
+      session_id: sessionId,
     }),
   });
-
   if (!res.ok) throw new Error("Chat failed");
   return res.json();
 }
 
-export async function uploadFile(file: File): Promise<{ chunks: number; success?: boolean }> {
+export async function exportChatHistory(sessionId?: string): Promise<void> {
+  const url = sessionId
+    ? `${API_BASE}/api/chat/export?session_id=${sessionId}`
+    : `${API_BASE}/api/chat/export`;
+  const res = await fetch(url, { method: "POST" });
+  if (!res.ok) throw new Error("Export failed");
+  const blob = await res.blob();
+  const a = document.createElement("a");
+  a.href = window.URL.createObjectURL(blob);
+  a.download = `chat_export_${Date.now()}.md`;
+  a.click();
+  window.URL.revokeObjectURL(a.href);
+}
+
+// ─── Document Service (/api/documents/) ─────────────
+
+export async function uploadFile(
+  file: File,
+): Promise<{ chunks: number; success: boolean; document_id?: string }> {
   const formData = new FormData();
   formData.append("file", file);
-
-  const res = await fetch(`${API_BASE}/upload`, {
+  const res = await fetch(`${API_BASE}/api/documents/upload`, {
     method: "POST",
     body: formData,
   });
-
   if (!res.ok) throw new Error("Upload failed");
   const data = await res.json();
-  return { chunks: data.chunks, success: data.success !== false };
+  return { chunks: data.chunks, success: data.success !== false, document_id: data.document_id };
 }
 
-export async function listDocs(): Promise<Array<{ document_id: string; document_name: string; upload_time: string; chunk_count: number }>> {
-  const res = await fetch(`${API_BASE}/documents`);
+export async function listDocs(): Promise<
+  Array<{
+    document_id: string;
+    document_name: string;
+    file_size: number;
+    chunk_count: number;
+    status: string;
+    created_at: string;
+  }>
+> {
+  const res = await fetch(`${API_BASE}/api/documents/list`);
   if (!res.ok) throw new Error("Failed to list documents");
   const data = await res.json();
-  return (data.documents || []).map((doc: any) => ({
-    document_id: doc.document_id,
-    document_name: doc.document_name,
-    upload_time: doc.upload_time,
-    chunk_count: doc.chunk_count
-  }));
+  return data.documents || [];
 }
 
-export async function deleteDoc(docName: string): Promise<void> {
-  const res = await fetch(`${API_BASE}/documents/${docName}`, {
+export async function deleteDoc(docId: string): Promise<void> {
+  const res = await fetch(`${API_BASE}/api/documents/${docId}`, {
     method: "DELETE",
   });
   if (!res.ok) throw new Error("Delete failed");
 }
 
+// ─── Quiz Service (/api/quiz/) ──────────────────────
+
 export async function generateQuiz(
   topic: string,
   difficulty: string,
   quizType: string,
-  fromDocuments: boolean
+  fromDocuments: boolean,
 ): Promise<{ questions: any[] }> {
-  const res = await fetch(`${API_BASE}/quiz/generate`, {
+  const res = await fetch(`${API_BASE}/api/quiz/generate`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       topic,
       difficulty,
       quiz_type: quizType,
-      from_documents: fromDocuments,
+      use_documents: fromDocuments,
     }),
   });
-
   if (!res.ok) throw new Error("Quiz generation failed");
   return res.json();
 }
 
+// ─── Auth Service (/api/auth/) ──────────────────────
+
 export async function setPIN(pin: string): Promise<{ success: boolean }> {
-  const res = await fetch(`${API_BASE}/pin/set`, {
+  const res = await fetch(`${API_BASE}/api/auth/pin/set`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ pin }),
   });
-
   if (!res.ok) throw new Error("Failed to set PIN");
   return res.json();
 }
 
 export async function verifyPIN(pin: string): Promise<{ verified: boolean }> {
-  const res = await fetch(`${API_BASE}/pin/verify`, {
+  const res = await fetch(`${API_BASE}/api/auth/pin/verify`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ pin }),
   });
-
   if (!res.ok) throw new Error("Verification failed");
   return res.json();
 }
 
 export async function checkPINExists(): Promise<{ exists: boolean }> {
-  const res = await fetch(`${API_BASE}/pin/exists`);
+  const res = await fetch(`${API_BASE}/api/auth/pin/exists`);
   if (!res.ok) throw new Error("Check failed");
   return res.json();
 }
 
-export async function speechToText(audioBlob: Blob): Promise<{ text: string }> {
-  const formData = new FormData();
-  formData.append("audio", audioBlob);
+// ─── Speech Service (/api/speech/) ──────────────────
 
-  const res = await fetch(`${API_BASE}/speech/transcribe`, {
+export async function speechToText(audioBlob: Blob): Promise<{ text: string; language?: string }> {
+  const formData = new FormData();
+  formData.append("audio_file", audioBlob, "recording.wav");
+  const res = await fetch(`${API_BASE}/api/speech/transcribe`, {
     method: "POST",
     body: formData,
   });
-
   if (!res.ok) throw new Error("Speech-to-text failed");
   return res.json();
 }
 
-export async function exportChatHistory(): Promise<void> {
-  const res = await fetch(`${API_BASE}/chat/export`, {
-    method: "POST",
-  });
+// ─── Health (Gateway) ───────────────────────────────
 
-  if (!res.ok) throw new Error("Export failed");
-
-  const blob = await res.blob();
-  const url = window.URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = `chat_history_${Date.now()}.md`;
-  a.click();
-  window.URL.revokeObjectURL(url);
+export async function checkHealth(): Promise<{ status: string }> {
+  const res = await fetch(`${API_BASE}/api/health`);
+  if (!res.ok) throw new Error("Health check failed");
+  return res.json();
 }

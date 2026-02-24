@@ -1,24 +1,181 @@
 version: '3.8'
 
 services:
-  dravis:
+  # ──────────────────────────────────────────────
+  # INFRASTRUCTURE
+  # ──────────────────────────────────────────────
+  mysql:
+    image: mysql:8.0
+    container_name: dravis-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-dravis_root_2024}
+      MYSQL_DATABASE: dravis
+      MYSQL_USER: ${MYSQL_USER:-dravis}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-dravis_pass_2024}
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    networks:
+      - dravis-net
+    restart: unless-stopped
+
+  chromadb:
+    image: chromadb/chroma:0.4.22
+    container_name: dravis-chromadb
+    ports:
+      - "8010:8000"
+    volumes:
+      - chroma_data:/chroma/chroma
+    environment:
+      - ANONYMIZED_TELEMETRY=FALSE
+      - IS_PERSISTENT=TRUE
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/heartbeat"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - dravis-net
+    restart: unless-stopped
+
+  # ──────────────────────────────────────────────
+  # MICROSERVICES
+  # ──────────────────────────────────────────────
+  auth:
+    build:
+      context: ./services/auth
+      dockerfile: Dockerfile
+    container_name: dravis-auth
+    environment:
+      - DATABASE_URL=mysql+pymysql://${MYSQL_USER:-dravis}:${MYSQL_PASSWORD:-dravis_pass_2024}@mysql:3306/dravis
+      - SERVICE_NAME=auth
+      - SERVICE_PORT=8001
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - dravis-net
+    restart: unless-stopped
+
+  chat:
+    build:
+      context: ./services/chat
+      dockerfile: Dockerfile
+    container_name: dravis-chat
+    environment:
+      - DATABASE_URL=mysql+pymysql://${MYSQL_USER:-dravis}:${MYSQL_PASSWORD:-dravis_pass_2024}@mysql:3306/dravis
+      - OLLAMA_BASE_URL=${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
+      - OLLAMA_MODEL=${OLLAMA_MODEL:-llama3.1:8b}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - OPENAI_MODEL=${OPENAI_MODEL:-gpt-3.5-turbo}
+      - DOCUMENT_SERVICE_URL=http://document:8003
+      - SERVICE_NAME=chat
+      - SERVICE_PORT=8002
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+    depends_on:
+      mysql:
+        condition: service_healthy
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - dravis-net
+    restart: unless-stopped
+
+  document:
+    build:
+      context: ./services/document
+      dockerfile: Dockerfile
+    container_name: dravis-document
+    environment:
+      - DATABASE_URL=mysql+pymysql://${MYSQL_USER:-dravis}:${MYSQL_PASSWORD:-dravis_pass_2024}@mysql:3306/dravis
+      - CHROMADB_HOST=chromadb
+      - CHROMADB_PORT=8000
+      - SERVICE_NAME=document
+      - SERVICE_PORT=8003
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+    volumes:
+      - uploads_data:/app/uploads
+      - model_cache:/root/.cache
+    depends_on:
+      mysql:
+        condition: service_healthy
+      chromadb:
+        condition: service_healthy
+    networks:
+      - dravis-net
+    restart: unless-stopped
+
+  quiz:
+    build:
+      context: ./services/quiz
+      dockerfile: Dockerfile
+    container_name: dravis-quiz
+    environment:
+      - CHAT_SERVICE_URL=http://chat:8002
+      - DOCUMENT_SERVICE_URL=http://document:8003
+      - SERVICE_NAME=quiz
+      - SERVICE_PORT=8004
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+    depends_on:
+      - chat
+      - document
+    networks:
+      - dravis-net
+    restart: unless-stopped
+
+  speech:
+    build:
+      context: ./services/speech
+      dockerfile: Dockerfile
+    container_name: dravis-speech
+    environment:
+      - SERVICE_NAME=speech
+      - SERVICE_PORT=8005
+      - WHISPER_MODEL=${WHISPER_MODEL:-base}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+    volumes:
+      - model_cache:/root/.cache
+    networks:
+      - dravis-net
+    restart: unless-stopped
+    profiles:
+      - full
+
+  # ──────────────────────────────────────────────
+  # GATEWAY (Nginx reverse proxy + frontend)
+  # ──────────────────────────────────────────────
+  gateway:
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: services/gateway/Dockerfile
+    container_name: dravis-gateway
     ports:
-      - "8000:8000"
-    environment:
-      - PYTHONUNBUFFERED=1
-      - HOST=0.0.0.0
-      - PORT=8000
-    volumes:
-      - ./chroma_db:/app/chroma_db
-      - ./dravis_data:/app/dravis_data
-      - ./backend:/app/backend
+      - "${GATEWAY_PORT:-8080}:80"
+    depends_on:
+      - auth
+      - chat
+      - document
+      - quiz
+    networks:
+      - dravis-net
     restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 5s
+
+networks:
+  dravis-net:
+    driver: bridge
+
+volumes:
+  mysql_data:
+  chroma_data:
+  uploads_data:
+  model_cache:

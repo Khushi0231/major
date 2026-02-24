@@ -21,6 +21,12 @@ class Config:
     API_VERSION = "1.0.0"
     API_HOST = os.getenv("API_HOST", "0.0.0.0")
     API_PORT = int(os.getenv("API_PORT", 8000))
+    CORS_ORIGINS = [
+        "http://localhost:3000",
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        "tauri://localhost"
+    ]
     
     # Logging
     LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
