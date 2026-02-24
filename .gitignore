@@ -61,3 +61,4 @@ htmlcov/
 # Model files (managed by Ollama, not stored in git)
 *.gguf
 *.bin
+backend.log

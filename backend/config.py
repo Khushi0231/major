@@ -49,10 +49,13 @@ class Config:
     # LLM Providers
     LLM_CONFIG = {
         "ollama": {
-            "enabled": os.getenv("OLLAMA_ENABLED", "false").lower() == "true",
+            "enabled": os.getenv("OLLAMA_ENABLED", "true").lower() == "true",
             "base_url": os.getenv("OLLAMA_BASE_URL", "http://localhost:11434"),
-            "model": os.getenv("OLLAMA_MODEL", "llama3.1:8b"),
-            "timeout": 30
+            "model": os.getenv("OLLAMA_MODEL", "mistral"),
+            "timeout": int(os.getenv("OLLAMA_TIMEOUT", "120"))
+        },
+        "gguf": {
+            "model_dir": os.getenv("GGUF_MODEL_DIR", str(BASE_DIR / "models")),
         },
         "openai": {
             "enabled": os.getenv("OPENAI_ENABLED", "false").lower() == "true",

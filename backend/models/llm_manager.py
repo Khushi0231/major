@@ -59,20 +59,27 @@ class LLMManager:
         logger.info(f"Initialized {len(self.providers)} LLM providers")
     
     def is_available(self) -> bool:
-        """Check if any provider is available (synchronous, safe from sync context)"""
-        # Simple sync check - avoid running async in sync context within event loop
+        """Check if any real (non-mock) provider is available"""
+        import requests
         for provider in self.providers:
             try:
-                # For providers with easy sync checks
-                if isinstance(provider, GGUFProvider):
-                    return provider.model is not None
                 if isinstance(provider, MockProvider):
-                    return True
-                # For Ollama/OpenAI, just check if they're configured
-                return True
+                    continue  # Don't count mock as "available"
+                if isinstance(provider, GGUFProvider):
+                    if provider.model is not None:
+                        return True
+                if isinstance(provider, OllamaProvider):
+                    try:
+                        r = requests.get(f"{provider.base_url}/api/tags", timeout=2)
+                        if r.status_code == 200:
+                            return True
+                    except:
+                        continue
+                if isinstance(provider, OpenAIProvider):
+                    return True  # If configured, assume available
             except:
                 continue
-        return len(self.providers) > 0
+        return False
     
     def generate(self, prompt: str, **kwargs) -> Optional[str]:
         """Generate response using first available provider (synchronous wrapper)"""

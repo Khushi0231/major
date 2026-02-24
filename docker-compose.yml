@@ -1,68 +1,42 @@
-version: '3.8'
-
 # ============================================================
-# DRAVIS — Full Stack Docker Compose
-# Usage:
-#   docker-compose up --build        (CPU mode)
-#   docker-compose --profile gpu up  (NVIDIA GPU mode)
+# DRAVIS — Docker Compose (works on any machine out of the box)
+# Usage:   docker compose up --build -d
 # ============================================================
 
 services:
 
-  # ──────────────────────────────────────────
-  # 1. Ollama — LLM Runtime (Mistral 7B)
-  # ──────────────────────────────────────────
+  # ── Ollama (LLM Runtime) ────────────────────
   ollama:
     image: ollama/ollama:latest
     container_name: dravis-ollama
     restart: unless-stopped
     volumes:
-      - ollama_data:/root/.ollama          # model cache persists across restarts
+      - ollama_data:/root/.ollama
     ports:
       - "11434:11434"
     environment:
-      - OLLAMA_KEEP_ALIVE=24h              # keep model loaded in VRAM
+      - OLLAMA_KEEP_ALIVE=24h
       - OLLAMA_MAX_LOADED_MODELS=1
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
-      interval: 30s
-      timeout: 10s
+      test: ["CMD-SHELL", "ollama list || exit 1"]
+      interval: 15s
+      timeout: 5s
       retries: 10
-      start_period: 60s                    # give time to pull model on first run
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: all
-              capabilities: [gpu]          # NVIDIA GPU passthrough
+      start_period: 30s
 
-  # ──────────────────────────────────────────
-  # 2. Ollama Model Initializer
-  #    (pulls mistral:7b-instruct on first run)
-  # ──────────────────────────────────────────
+  # ── Model pull (one-time on first run) ──────
   ollama-init:
-    image: curlimages/curl:latest
+    image: ollama/ollama:latest
     container_name: dravis-ollama-init
     restart: "no"
     depends_on:
       ollama:
         condition: service_healthy
-    entrypoint: >
-      sh -c "
-        echo '🤖 Checking Mistral 7B Instruct model...' &&
-        curl -s http://ollama:11434/api/tags | grep -q 'mistral' &&
-        echo '✓ Model already cached' ||
-        (echo '📥 Pulling mistral:7b-instruct (first time ~4.5GB)...' &&
-         curl -X POST http://ollama:11434/api/pull
-           -H 'Content-Type: application/json'
-           -d '{\"name\":\"mistral:7b-instruct\",\"stream\":false}' &&
-         echo '✅ Model ready')
-      "
+    entrypoint: ["sh", "-c", "ollama pull mistral"]
+    environment:
+      - OLLAMA_HOST=http://ollama:11434
 
-  # ──────────────────────────────────────────
-  # 3. Backend — FastAPI + uvicorn
-  # ──────────────────────────────────────────
+  # ── Backend (FastAPI) ───────────────────────
   backend:
     build:
       context: .
@@ -75,26 +49,25 @@ services:
     environment:
       - OLLAMA_ENABLED=true
       - OLLAMA_BASE_URL=http://ollama:11434
-      - OLLAMA_MODEL=mistral:7b-instruct
-      - MOCK_ENABLED=true                  # fallback if Ollama not ready
+      - OLLAMA_MODEL=mistral
+      - OLLAMA_TIMEOUT=120
+      - MOCK_ENABLED=true
       - API_HOST=0.0.0.0
       - API_PORT=8000
       - LOG_LEVEL=INFO
     volumes:
-      - chroma_data:/app/chroma_db         # vector store persists
-      - dravis_data:/app/dravis_data       # sqlite db + uploads + pins
+      - chroma_data:/app/chroma_db
+      - dravis_data:/app/dravis_data
     ports:
       - "8000:8000"
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
-      interval: 20s
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/')\""]
+      interval: 15s
       timeout: 10s
       retries: 5
-      start_period: 30s
+      start_period: 40s
 
-  # ──────────────────────────────────────────
-  # 4. Frontend — nginx serving React build
-  # ──────────────────────────────────────────
+  # ── Frontend (nginx + React) ────────────────
   frontend:
     build:
       context: .
@@ -106,20 +79,9 @@ services:
         condition: service_healthy
     ports:
       - "80:80"
-      - "8080:80"                          # alternate port for Codespaces
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost/"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
+      - "8080:80"
 
-# ──────────────────────────────────────────
-# Named Volumes (data persists across restarts)
-# ──────────────────────────────────────────
 volumes:
   ollama_data:
-    driver: local                          # ~4.5 GB — Mistral 7B lives here
   chroma_data:
-    driver: local                          # ChromaDB vector embeddings
   dravis_data:
-    driver: local                          # SQLite + uploads + PIN hash

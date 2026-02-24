@@ -1,6 +1,6 @@
 # DRAVIS Backend Requirements
-# Docker: all deps installed at build time
-# Local: pip install -r backend/requirements.txt
+# Docker: pip install -r requirements.txt
+# Local:  pip install -r backend/requirements.txt
 
 # FastAPI
 fastapi>=0.104.0
@@ -9,7 +9,9 @@ pydantic>=2.5.0
 python-multipart>=0.0.6
 python-dotenv>=1.0.0
 
-# AI / Embeddings
+# AI / Embeddings (CPU-only torch to keep image lean)
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch
 sentence-transformers>=2.2.2
 chromadb>=0.4.18
 numpy>=1.24.0
@@ -19,6 +21,6 @@ PyMuPDF>=1.24.0
 python-docx>=1.1.0
 python-pptx>=0.6.23
 
-# HTTP (for Ollama provider)
+# HTTP (Ollama + OpenAI providers)
 requests>=2.31.0
 httpx>=0.25.0
