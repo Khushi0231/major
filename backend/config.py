@@ -1,9 +1,12 @@
 """Configuration management"""
 import os
 from pathlib import Path
-from dotenv import load_dotenv
 
-load_dotenv()
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass  # python-dotenv not installed, env vars must be set manually
 
 class Config:
     """Application configuration"""
@@ -15,12 +18,25 @@ class Config:
     UPLOAD_DIR = os.getenv("UPLOAD_DIR", str(BASE_DIR / ".." / "dravis_data" / "uploads"))
     LOG_DIR = os.getenv("LOG_DIR", str(BASE_DIR / ".." / "dravis_data" / "logs"))
     LOG_FILE = os.path.join(LOG_DIR, "dravis.log")
+    PIN_HASH_FILE = os.path.join(str(BASE_DIR / ".." / "dravis_data"), "pin_hash.txt")
     
     # API Configuration
     API_TITLE = "DRAVIS API"
     API_VERSION = "1.0.0"
     API_HOST = os.getenv("API_HOST", "0.0.0.0")
     API_PORT = int(os.getenv("API_PORT", 8000))
+    
+    # Aliases used by main.py
+    HOST = API_HOST
+    PORT = API_PORT
+    
+    # File upload settings
+    MAX_FILE_SIZE = int(os.getenv("MAX_FILE_SIZE", str(50 * 1024 * 1024)))  # 50MB
+    ALLOWED_EXTENSIONS = {
+        'pdf', 'docx', 'pptx', 'txt', 'md',
+        'jpg', 'jpeg', 'png', 'bmp',
+        'py', 'java', 'cpp', 'js', 'json'
+    }
     
     # Logging
     LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")

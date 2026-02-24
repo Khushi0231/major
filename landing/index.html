@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DRAVIS — Download & Setup</title>
+  <meta name="description" content="DRAVIS: 100% Offline AI Study Assistant powered by Mistral 7B. One-click Docker setup." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500&display=swap" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:       #050810;
+      --bg2:      #0a0f1e;
+      --bg3:      #111827;
+      --accent:   #3b82f6;
+      --accent2:  #8b5cf6;
+      --green:    #10b981;
+      --text:     #f1f5f9;
+      --muted:    #64748b;
+      --border:   rgba(255,255,255,0.08);
+      --glow:     0 0 40px rgba(59,130,246,0.15);
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    /* ── Stars background ── */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        radial-gradient(1px 1px at 20% 30%, rgba(255,255,255,0.4) 0%, transparent 100%),
+        radial-gradient(1px 1px at 80% 10%, rgba(255,255,255,0.3) 0%, transparent 100%),
+        radial-gradient(1px 1px at 50% 70%, rgba(255,255,255,0.35) 0%, transparent 100%),
+        radial-gradient(1px 1px at 10% 80%, rgba(255,255,255,0.2) 0%, transparent 100%),
+        radial-gradient(1px 1px at 90% 60%, rgba(255,255,255,0.25) 0%, transparent 100%),
+        radial-gradient(circle at 20% 50%, rgba(59,130,246,0.05) 0%, transparent 50%),
+        radial-gradient(circle at 80% 20%, rgba(139,92,246,0.05) 0%, transparent 50%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .container { max-width: 1100px; margin: 0 auto; padding: 0 24px; position: relative; z-index: 1; }
+
+    /* ── Nav ── */
+    nav {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 20px 0; border-bottom: 1px solid var(--border);
+      position: relative; z-index: 1;
+    }
+    .logo { font-size: 22px; font-weight: 800; letter-spacing: -0.5px; }
+    .logo span { background: linear-gradient(135deg, var(--accent), var(--accent2)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .badge {
+      background: rgba(16,185,129,0.12); color: var(--green);
+      border: 1px solid rgba(16,185,129,0.25); padding: 4px 12px;
+      border-radius: 100px; font-size: 12px; font-weight: 600;
+    }
+    nav a { color: var(--muted); text-decoration: none; font-size: 14px; transition: color 0.2s; }
+    nav a:hover { color: var(--text); }
+    .nav-links { display: flex; gap: 28px; align-items: center; }
+
+    /* ── Hero ── */
+    .hero {
+      text-align: center; padding: 100px 0 80px;
+      background: radial-gradient(ellipse 80% 60% at 50% 0%, rgba(59,130,246,0.08), transparent);
+    }
+    .hero-tag {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: rgba(59,130,246,0.08); border: 1px solid rgba(59,130,246,0.2);
+      color: var(--accent); padding: 6px 16px; border-radius: 100px;
+      font-size: 13px; font-weight: 500; margin-bottom: 32px;
+    }
+    .hero-tag::before { content: '●'; font-size: 8px; animation: pulse 2s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+    .hero h1 {
+      font-size: clamp(42px, 7vw, 80px); font-weight: 900;
+      line-height: 1.05; letter-spacing: -2px; margin-bottom: 24px;
+    }
+    .hero h1 .grad {
+      background: linear-gradient(135deg, var(--accent) 0%, var(--accent2) 50%, #ec4899 100%);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    }
+    .hero p {
+      font-size: 18px; color: var(--muted); max-width: 580px; margin: 0 auto 48px;
+      font-weight: 400;
+    }
+
+    /* ── CTA Buttons ── */
+    .cta-group { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; margin-bottom: 60px; }
+
+    .btn {
+      display: inline-flex; align-items: center; gap: 10px;
+      padding: 16px 32px; border-radius: 12px; font-size: 15px;
+      font-weight: 600; cursor: pointer; transition: all 0.2s;
+      text-decoration: none; border: none; font-family: inherit;
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      color: white;
+      box-shadow: 0 0 30px rgba(59,130,246,0.35), 0 4px 20px rgba(0,0,0,0.4);
+    }
+    .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 0 40px rgba(59,130,246,0.5), 0 8px 30px rgba(0,0,0,0.5); }
+    .btn-primary:active { transform: translateY(0); }
+
+    .btn-secondary {
+      background: var(--bg3); color: var(--text);
+      border: 1px solid var(--border);
+    }
+    .btn-secondary:hover { background: rgba(255,255,255,0.05); border-color: rgba(255,255,255,0.15); }
+
+    /* ── Requirements ── */
+    .req-bar {
+      display: flex; gap: 24px; justify-content: center; flex-wrap: wrap;
+      margin-bottom: 40px;
+    }
+    .req-item {
+      display: flex; align-items: center; gap: 8px;
+      font-size: 13px; color: var(--muted);
+    }
+    .req-item .icon { font-size: 16px; }
+
+    /* ── Step cards ── */
+    .steps { padding: 80px 0; }
+    .section-label { text-align: center; color: var(--accent); font-size: 13px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 12px; }
+    .section-title { text-align: center; font-size: clamp(28px, 4vw, 40px); font-weight: 800; letter-spacing: -1px; margin-bottom: 16px; }
+    .section-sub { text-align: center; color: var(--muted); font-size: 16px; margin-bottom: 56px; max-width: 500px; margin-left: auto; margin-right: auto; }
+
+    .steps-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 20px;
+    }
+    .step-card {
+      background: var(--bg2); border: 1px solid var(--border);
+      border-radius: 16px; padding: 28px;
+      transition: all 0.3s; position: relative; overflow: hidden;
+    }
+    .step-card::before {
+      content: ''; position: absolute; inset: 0;
+      background: linear-gradient(135deg, rgba(59,130,246,0.05), transparent);
+      opacity: 0; transition: opacity 0.3s;
+    }
+    .step-card:hover { border-color: rgba(59,130,246,0.3); transform: translateY(-4px); box-shadow: 0 20px 40px rgba(0,0,0,0.4); }
+    .step-card:hover::before { opacity: 1; }
+
+    .step-num {
+      width: 40px; height: 40px; border-radius: 10px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 800; font-size: 16px; margin-bottom: 16px;
+    }
+    .step-card h3 { font-size: 17px; font-weight: 700; margin-bottom: 10px; }
+    .step-card p { font-size: 14px; color: var(--muted); line-height: 1.6; }
+
+    .code-block {
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: 8px; padding: 12px 16px; margin-top: 14px;
+      font-family: 'JetBrains Mono', monospace; font-size: 13px;
+      color: #7dd3fc; display: flex; align-items: center; justify-content: space-between;
+      cursor: pointer; transition: border-color 0.2s;
+    }
+    .code-block:hover { border-color: rgba(59,130,246,0.4); }
+    .copy-btn { font-size: 11px; color: var(--muted); background: none; border: none; cursor: pointer; padding: 4px 8px; border-radius: 4px; transition: all 0.2s; font-family: inherit; }
+    .copy-btn:hover { background: rgba(255,255,255,0.05); color: var(--text); }
+    .copy-btn.copied { color: var(--green); }
+
+    /* ── Features ── */
+    .features { padding: 0 0 80px; }
+    .features-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; }
+    .feat {
+      background: var(--bg2); border: 1px solid var(--border); border-radius: 12px;
+      padding: 22px; transition: all 0.2s;
+    }
+    .feat:hover { border-color: rgba(139,92,246,0.3); }
+    .feat .icon { font-size: 28px; margin-bottom: 12px; }
+    .feat h4 { font-size: 15px; font-weight: 700; margin-bottom: 6px; }
+    .feat p { font-size: 13px; color: var(--muted); }
+
+    /* ── Download modal trigger section ── */
+    .download-section {
+      background: linear-gradient(135deg, rgba(59,130,246,0.08), rgba(139,92,246,0.08));
+      border: 1px solid var(--border); border-radius: 24px; padding: 60px 40px;
+      text-align: center; margin-bottom: 80px;
+    }
+    .download-section h2 { font-size: 36px; font-weight: 800; letter-spacing: -1px; margin-bottom: 12px; }
+    .download-section p { color: var(--muted); margin-bottom: 32px; font-size: 16px; }
+
+    .platform-tabs {
+      display: flex; gap: 8px; justify-content: center; margin-bottom: 28px; flex-wrap: wrap;
+    }
+    .tab {
+      padding: 8px 20px; border-radius: 8px; font-size: 14px; font-weight: 500;
+      cursor: pointer; border: 1px solid var(--border); background: var(--bg);
+      color: var(--muted); transition: all 0.2s;
+    }
+    .tab.active { background: var(--accent); color: white; border-color: var(--accent); }
+    .tab:hover:not(.active) { border-color: rgba(255,255,255,0.2); color: var(--text); }
+
+    .install-block {
+      background: var(--bg); border: 1px solid var(--border); border-radius: 12px;
+      padding: 20px 24px; max-width: 600px; margin: 0 auto 24px; text-align: left;
+    }
+    .install-block .comment { color: var(--muted); font-size: 13px; margin-bottom: 8px; }
+    .install-block code {
+      font-family: 'JetBrains Mono', monospace; font-size: 14px;
+      color: #7dd3fc; display: block; line-height: 2;
+    }
+    .install-block code .cmd { color: #86efac; }
+    .install-block code .flag { color: #fbbf24; }
+
+    .size-note { font-size: 13px; color: var(--muted); display: flex; align-items: center; gap: 6px; justify-content: center; }
+    .size-note .warn { color: #fbbf24; }
+
+    /* ── Footer ── */
+    footer {
+      border-top: 1px solid var(--border); padding: 32px 0; text-align: center;
+      color: var(--muted); font-size: 13px;
+    }
+    footer strong { color: var(--text); }
+
+    /* ── Copy toast ── */
+    .toast {
+      position: fixed; bottom: 24px; right: 24px;
+      background: var(--green); color: white; padding: 12px 20px;
+      border-radius: 8px; font-size: 14px; font-weight: 600;
+      transform: translateY(80px); opacity: 0; transition: all 0.3s; z-index: 999;
+    }
+    .toast.show { transform: translateY(0); opacity: 1; }
+
+    @media (max-width: 640px) {
+      .hero { padding: 60px 0 50px; }
+      .hero h1 { letter-spacing: -1px; }
+      .nav-links { display: none; }
+      .download-section { padding: 40px 24px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Nav -->
+<div class="container">
+  <nav>
+    <div style="display:flex;align-items:center;gap:16px">
+      <div class="logo">D<span>RAVIS</span></div>
+      <div class="badge">v1.0 · Offline AI</div>
+    </div>
+    <div class="nav-links">
+      <a href="#install">Install</a>
+      <a href="#features">Features</a>
+      <a href="https://github.com" target="_blank">GitHub ↗</a>
+    </div>
+  </nav>
+</div>
+
+<!-- Hero -->
+<section class="hero">
+  <div class="container">
+    <div class="hero-tag">Powered by Mistral 7B · 100% Offline</div>
+    <h1>
+      Your AI Study Assistant<br />
+      <span class="grad">That Never Leaves Your Machine</span>
+    </h1>
+    <p>
+      DRAVIS runs entirely offline using Mistral 7B Instruct — full accuracy, zero cloud dependency, zero data leaks. One Docker command gets you started.
+    </p>
+    <div class="req-bar">
+      <div class="req-item"><span class="icon">🐋</span> Docker Desktop</div>
+      <div class="req-item"><span class="icon">💾</span> ~6 GB free disk</div>
+      <div class="req-item"><span class="icon">🖥️</span> 16 GB RAM recommended</div>
+      <div class="req-item"><span class="icon">⚡</span> NVIDIA GPU optional</div>
+    </div>
+    <div class="cta-group">
+      <a href="#install" class="btn btn-primary">
+        <span>⬇️</span> Get DRAVIS — Free
+      </a>
+      <a href="https://github.com" target="_blank" class="btn btn-secondary">
+        <span>⭐</span> Star on GitHub
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- Steps -->
+<section class="steps" id="install">
+  <div class="container">
+    <div class="section-label">Setup Guide</div>
+    <h2 class="section-title">Up and running in 3 steps</h2>
+    <p class="section-sub">Everything — AI model, vector store, backend, frontend — starts with one command.</p>
+
+    <div class="steps-grid">
+      <div class="step-card">
+        <div class="step-num">1</div>
+        <h3>Clone the Repository</h3>
+        <p>Download the DRAVIS source code from GitHub. No model files included — they download automatically.</p>
+        <div class="code-block" onclick="copy(this, 'git clone https://github.com/your-org/dravis.git')">
+          <span>git clone https://github.com/your-org/dravis.git</span>
+          <button class="copy-btn">Copy</button>
+        </div>
+      </div>
+
+      <div class="step-card">
+        <div class="step-num">2</div>
+        <h3>Start with Docker Compose</h3>
+        <p>This pulls the Mistral 7B model (~4.5 GB, one-time), builds the app, and starts all services. Subsequent starts are instant.</p>
+        <div class="code-block" onclick="copy(this, 'cd dravis && docker-compose up --build -d')">
+          <span>cd dravis && docker-compose up --build -d</span>
+          <button class="copy-btn">Copy</button>
+        </div>
+        <p style="margin-top:12px;font-size:13px;color:#64748b">⏳ First run ~5 min (model download). After that, instant start.</p>
+      </div>
+
+      <div class="step-card">
+        <div class="step-num">3</div>
+        <h3>Open DRAVIS</h3>
+        <p>Navigate to localhost in your browser. The green indicator confirms your local Mistral 7B is live and responding.</p>
+        <div class="code-block" onclick="copy(this, 'http://localhost')">
+          <span>http://localhost</span>
+          <button class="copy-btn">Copy</button>
+        </div>
+        <p style="margin-top:12px;font-size:13px;color:#10b981">✅ Green indicator = AI ready. Start chatting offline.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Full Download Section -->
+<div class="container" id="download">
+  <div class="download-section">
+    <h2>Choose Your Platform</h2>
+    <p>Docker Compose handles everything. Pick your OS below.</p>
+
+    <div class="platform-tabs">
+      <button class="tab active" onclick="showPlatform('linux', this)">🐧 Linux / Codespaces</button>
+      <button class="tab" onclick="showPlatform('mac', this)">🍎 macOS</button>
+      <button class="tab" onclick="showPlatform('windows', this)">🪟 Windows</button>
+      <button class="tab" onclick="showPlatform('gpu', this)">⚡ NVIDIA GPU</button>
+    </div>
+
+    <div id="platform-linux" class="install-block">
+      <div class="comment"># Linux / GitHub Codespaces</div>
+      <code>
+        <span class="cmd">git</span> clone https://github.com/your-org/dravis.git<br/>
+        <span class="cmd">cd</span> dravis<br/>
+        <span class="cmd">docker-compose</span> up <span class="flag">--build -d</span><br/>
+        <span class="cmd">open</span> http://localhost
+      </code>
+    </div>
+
+    <div id="platform-mac" class="install-block" style="display:none">
+      <div class="comment"># macOS (install Docker Desktop first)</div>
+      <code>
+        <span class="cmd">brew</span> install --cask docker<br/>
+        <span class="cmd">git</span> clone https://github.com/your-org/dravis.git<br/>
+        <span class="cmd">cd</span> dravis<br/>
+        <span class="cmd">docker-compose</span> up <span class="flag">--build -d</span>
+      </code>
+    </div>
+
+    <div id="platform-windows" class="install-block" style="display:none">
+      <div class="comment"># Windows (Docker Desktop + WSL2 required)</div>
+      <code>
+        <span class="comment"># 1. Install Docker Desktop from https://docker.com</span><br/>
+        <span class="cmd">git</span> clone https://github.com/your-org/dravis.git<br/>
+        <span class="cmd">cd</span> dravis<br/>
+        <span class="cmd">START.bat</span><span class="flag">   ← double click or run in terminal</span>
+      </code>
+    </div>
+
+    <div id="platform-gpu" class="install-block" style="display:none">
+      <div class="comment"># NVIDIA GPU — install NVIDIA Container Toolkit first</div>
+      <code>
+        <span class="comment"># https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/install-guide.html</span><br/>
+        <span class="cmd">git</span> clone https://github.com/your-org/dravis.git<br/>
+        <span class="cmd">cd</span> dravis<br/>
+        <span class="cmd">docker-compose</span> up <span class="flag">--build -d</span><span class="comment">  # GPU auto-detected</span>
+      </code>
+    </div>
+
+    <div class="size-note">
+      <span class="warn">⚡</span>
+      First run downloads Mistral 7B (~4.5 GB). Model is cached — subsequent starts are instant.
+    </div>
+  </div>
+</div>
+
+<!-- Features -->
+<section class="features" id="features">
+  <div class="container">
+    <div class="section-label">Capabilities</div>
+    <h2 class="section-title">Everything you need, offline</h2>
+    <p class="section-sub">Full Mistral 7B quality. No compromises.</p>
+
+    <div class="features-grid">
+      <div class="feat">
+        <div class="icon">🧠</div>
+        <h4>Mistral 7B Instruct</h4>
+        <p>Full 7 billion parameter model — not a mini version. Real reasoning and explanations.</p>
+      </div>
+      <div class="feat">
+        <div class="icon">📚</div>
+        <h4>Study from Your Docs</h4>
+        <p>Upload PDFs, DOCX, PPTs. DRAVIS uses RAG to answer questions from your own material.</p>
+      </div>
+      <div class="feat">
+        <div class="icon">📝</div>
+        <h4>Auto Quiz Generation</h4>
+        <p>Generate MCQ, True/False, short-answer quizzes on any topic or from uploaded documents.</p>
+      </div>
+      <div class="feat">
+        <div class="icon">🔒</div>
+        <h4>PIN Lock</h4>
+        <p>Protect your study sessions with a 4-digit PIN that never leaves your device.</p>
+      </div>
+      <div class="feat">
+        <div class="icon">⚡</div>
+        <h4>NVIDIA GPU Acceleration</h4>
+        <p>Auto-detects your GPU. 10x faster inference with CUDA — CPU fallback if no GPU.</p>
+      </div>
+      <div class="feat">
+        <div class="icon">🌐</div>
+        <h4>Zero Cloud, Zero Leaks</h4>
+        <p>Every token stays on your machine. No API keys, no usage limits, no telemetry.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Footer -->
+<footer>
+  <div class="container">
+    <p><strong>DRAVIS</strong> — Dynamic Reasoning AI for Virtual Intelligent Study · Open Source · MIT License</p>
+    <p style="margin-top:8px">Built with FastAPI · React · Ollama · Mistral 7B · Docker</p>
+  </div>
+</footer>
+
+<!-- Toast -->
+<div class="toast" id="toast">✓ Copied to clipboard</div>
+
+<script>
+  function copy(el, text) {
+    const btn = el.querySelector('.copy-btn');
+    navigator.clipboard.writeText(text).then(() => {
+      btn.textContent = '✓ Copied';
+      btn.classList.add('copied');
+      const toast = document.getElementById('toast');
+      toast.classList.add('show');
+      setTimeout(() => {
+        btn.textContent = 'Copy';
+        btn.classList.remove('copied');
+        toast.classList.remove('show');
+      }, 2000);
+    });
+  }
+
+  function showPlatform(platform, btn) {
+    // Hide all
+    ['linux','mac','windows','gpu'].forEach(p => {
+      document.getElementById('platform-' + p).style.display = 'none';
+    });
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    // Show selected
+    document.getElementById('platform-' + platform).style.display = 'block';
+    btn.classList.add('active');
+  }
+
+  // Smooth scroll
+  document.querySelectorAll('a[href^="#"]').forEach(a => {
+    a.addEventListener('click', e => {
+      e.preventDefault();
+      document.querySelector(a.getAttribute('href'))?.scrollIntoView({ behavior: 'smooth' });
+    });
+  });
+</script>
+
+</body>
+</html>

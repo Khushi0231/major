@@ -323,7 +323,7 @@ def health_check():
 
 @app.post("/api/pin/verify")
 async def verify_pin_route(req: PINVerifyRequest):
-    if verify_pin(Config.PIN_HASH_FILE, req.pin):
+    if verify_pin(req.pin, Config.PIN_HASH_FILE):
         return {"verified": True}
     return {"verified": False, "error": "Invalid PIN"}
 

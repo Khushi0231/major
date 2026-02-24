@@ -1,4 +1,5 @@
 import { useState, useRef } from "react";
+import './VoiceControls.css';
 
 export default function VoiceControls() {
   const [isRecording, setIsRecording] = useState(false);
@@ -21,10 +22,9 @@ export default function VoiceControls() {
 
       mediaRecorder.onstop = async () => {
         setIsProcessing(true);
-        
+
         try {
           // TODO: Implement speech-to-text once API is available
-          // For now, just show recording complete
           alert("Recording completed");
         } catch (error) {
           console.error("STT error:", error);
@@ -50,14 +50,10 @@ export default function VoiceControls() {
   };
 
   return (
-    <div className="border-t border-gray-800/50 bg-[#0f0f23]/80 p-4">
-      <div className="max-w-4xl mx-auto flex justify-center">
+    <div className="voice-controls">
+      <div className="voice-controls-inner">
         <button
-          className={`flex items-center gap-2 px-6 py-2.5 rounded-xl font-medium transition-all ${
-            isRecording
-              ? "bg-red-600 hover:bg-red-700 text-white"
-              : "bg-gray-800/50 hover:bg-gray-800 text-gray-300 border border-gray-700/50"
-          } disabled:opacity-50`}
+          className={`voice-btn ${isRecording ? "recording" : ""}`}
           onClick={isRecording ? stopRecording : startRecording}
           disabled={isProcessing}
         >

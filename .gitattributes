@@ -1,0 +1,6 @@
+# Line ending normalization
+* text=auto
+
+# Force binary for model files (no LFS needed - managed by Ollama)
+*.gguf binary
+*.bin binary

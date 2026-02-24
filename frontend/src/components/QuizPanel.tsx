@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { generateQuiz } from "../utils/api";
+import './QuizPanel.css';
 
 interface QuizQuestion {
   type: string;
@@ -46,113 +47,141 @@ export default function QuizPanel() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto p-6 space-y-6">
+    <div className="quiz-panel">
       {/* Generator Form */}
-      <div className="bg-gray-800/30 border border-gray-700/50 rounded-xl p-6">
-        <h3 className="text-lg font-semibold text-white mb-4">Generate Quiz</h3>
-        <div className="space-y-4">
+      <div className="quiz-header">
+        <div className="quiz-title">Generate Quiz</div>
+        <div className="quiz-controls">
           <input
             placeholder="Enter topic..."
             value={topic}
             onChange={(e) => setTopic(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && handleGenerate()}
-            className="w-full bg-gray-800/50 border border-gray-700/50 text-white px-4 py-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="quiz-input"
           />
-          <div className="grid grid-cols-2 gap-4">
-            <select
-              value={difficulty}
-              onChange={(e) => setDifficulty(e.target.value as any)}
-              className="bg-gray-800/50 border border-gray-700/50 text-white px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="easy">Easy</option>
-              <option value="medium">Medium</option>
-              <option value="hard">Hard</option>
-            </select>
-            <select
-              value={quizType}
-              onChange={(e) => setQuizType(e.target.value as any)}
-              className="bg-gray-800/50 border border-gray-700/50 text-white px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="simple">Simple</option>
-              <option value="advanced">Advanced</option>
-            </select>
-          </div>
-          <label className="flex items-center gap-2 text-sm text-gray-300 cursor-pointer">
+          <select
+            value={difficulty}
+            onChange={(e) => setDifficulty(e.target.value as any)}
+            className="quiz-input"
+            style={{ flex: 'none', width: 'auto' }}
+          >
+            <option value="easy">Easy</option>
+            <option value="medium">Medium</option>
+            <option value="hard">Hard</option>
+          </select>
+          <select
+            value={quizType}
+            onChange={(e) => setQuizType(e.target.value as any)}
+            className="quiz-input"
+            style={{ flex: 'none', width: 'auto' }}
+          >
+            <option value="simple">Simple</option>
+            <option value="advanced">Advanced</option>
+          </select>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginTop: '12px' }}>
+          <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', cursor: 'pointer', color: 'var(--text-secondary)' }}>
             <input
               type="checkbox"
               checked={useDocuments}
               onChange={(e) => setUseDocuments(e.target.checked)}
-              className="w-4 h-4 rounded border-gray-600 bg-gray-800 text-blue-500"
             />
             Use documents
           </label>
           <button
             onClick={handleGenerate}
             disabled={loading || !topic.trim()}
-            className="w-full px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50"
+            className="generate-btn"
           >
-            {loading ? "Generating..." : "Generate Quiz"}
+            {loading ? (
+              <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span className="loading-spinner"></span>
+                Generating...
+              </span>
+            ) : "Generate Quiz"}
           </button>
         </div>
       </div>
 
       {/* Questions */}
-      {questions.length > 0 && (
-        <div className="space-y-4">
-          {questions.map((q, idx) => (
-            <div key={idx} className="bg-gray-800/30 border border-gray-700/50 rounded-xl p-6">
-              <div className="flex items-start gap-4">
-                <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
-                  {idx + 1}
+      <div className="quiz-content">
+        {questions.length === 0 && !loading ? (
+          <div className="quiz-empty">
+            <div className="empty-icon">📝</div>
+            <p>Enter a topic and generate a quiz</p>
+          </div>
+        ) : (
+          <div className="quiz-questions">
+            {questions.map((q, idx) => (
+              <div key={idx} className="question-card">
+                <div className="question-text">
+                  <span style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    width: '28px',
+                    height: '28px',
+                    borderRadius: '50%',
+                    background: 'var(--accent)',
+                    color: 'white',
+                    fontWeight: 'bold',
+                    fontSize: '12px',
+                    marginRight: '10px',
+                    flexShrink: 0
+                  }}>
+                    {idx + 1}
+                  </span>
+                  {q.question}
                 </div>
-                <div className="flex-1">
-                  <div className="font-semibold text-white mb-3">{q.question}</div>
-                  {q.type === "mcq" || q.type === "true_false" ? (
-                    <div className="space-y-2">
-                      {q.options?.map((option, optIdx) => (
-                        <label
-                          key={optIdx}
-                          className={`block p-3 rounded-lg cursor-pointer transition-all ${
-                            selectedAnswers[idx] === option
-                              ? "bg-blue-600/20 border border-blue-500"
-                              : "bg-gray-800/50 border border-gray-700/50 hover:bg-gray-800"
-                          }`}
-                        >
-                          <input
-                            type="radio"
-                            name={`q-${idx}`}
-                            value={option}
-                            checked={selectedAnswers[idx] === option}
-                            onChange={() => setSelectedAnswers(prev => ({ ...prev, [idx]: option }))}
-                            className="mr-3"
-                          />
-                          {option}
-                        </label>
-                      ))}
-                    </div>
-                  ) : (
-                    <textarea
-                      placeholder="Your answer..."
-                      className="w-full bg-gray-800/50 border border-gray-700/50 text-white p-3 rounded-lg"
-                      rows={3}
-                      value={selectedAnswers[idx] || ""}
-                      onChange={(e) => setSelectedAnswers(prev => ({ ...prev, [idx]: e.target.value }))}
-                    />
-                  )}
-                  {selectedAnswers[idx] && (
-                    <div className="mt-4 p-4 bg-gray-900/50 rounded-lg border border-gray-700/50">
-                      <div className="text-sm font-semibold text-green-400 mb-1">
-                        ✓ Answer: {q.correct_answer}
+                {q.type === "mcq" || q.type === "true_false" ? (
+                  <div className="question-options">
+                    {q.options?.map((option, optIdx) => (
+                      <div
+                        key={optIdx}
+                        className={`option ${selectedAnswers[idx] === option ? "selected" : ""}`}
+                        onClick={() => setSelectedAnswers(prev => ({ ...prev, [idx]: option }))}
+                      >
+                        <input
+                          type="radio"
+                          name={`q-${idx}`}
+                          value={option}
+                          checked={selectedAnswers[idx] === option}
+                          onChange={() => setSelectedAnswers(prev => ({ ...prev, [idx]: option }))}
+                          style={{ marginRight: '10px' }}
+                        />
+                        {option}
                       </div>
-                      <div className="text-xs text-gray-400">{q.explanation}</div>
+                    ))}
+                  </div>
+                ) : (
+                  <textarea
+                    placeholder="Your answer..."
+                    className="quiz-input"
+                    rows={3}
+                    style={{ width: '100%', resize: 'vertical', marginTop: '8px' }}
+                    value={selectedAnswers[idx] || ""}
+                    onChange={(e) => setSelectedAnswers(prev => ({ ...prev, [idx]: e.target.value }))}
+                  />
+                )}
+                {selectedAnswers[idx] && (
+                  <div style={{
+                    marginTop: '12px',
+                    padding: '12px',
+                    background: 'var(--bg-primary)',
+                    borderRadius: '6px',
+                    border: '1px solid var(--border)'
+                  }}>
+                    <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--success)', marginBottom: '4px' }}>
+                      ✓ Answer: {q.correct_answer}
                     </div>
-                  )}
-                </div>
+                    <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>{q.explanation}</div>
+                  </div>
+                )}
               </div>
-            </div>
-          ))}
-        </div>
-      )}
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

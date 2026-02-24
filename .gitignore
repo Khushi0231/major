@@ -39,8 +39,12 @@ build/
 .env
 .env.local
 .env.*.local
+.venv/
+venv/
 
-# Data
+# Runtime Data
+dravis_data/
+chroma_db/
 data/
 uploads/
 logs/
@@ -53,3 +57,7 @@ htmlcov/
 # Database
 *.db
 *.sqlite
+
+# Model files (managed by Ollama, not stored in git)
+*.gguf
+*.bin

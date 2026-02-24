@@ -4,16 +4,44 @@
   "features": {
     "ghcr.io/devcontainers/features/node:latest": {}
   },
-  "postCreateCommand": "pip install -r requirements.txt && npm install",
-  "forwardPorts": [8000, 3000],
-      "remoteUser": "vscode",
+  "hostRequirements": {
+    "cpus": 4,
+    "memory": "16gb",
+    "storage": "32gb"
+  },
+  "postCreateCommand": "bash .devcontainer/setup.sh",
+  "forwardPorts": [
+    8000,
+    5173,
+    11434
+  ],
+  "portsAttributes": {
+    "8000": {
+      "label": "Backend API",
+      "onAutoForward": "notify"
+    },
+    "5173": {
+      "label": "Frontend",
+      "onAutoForward": "openBrowser"
+    },
+    "11434": {
+      "label": "Ollama",
+      "onAutoForward": "ignore"
+    }
+  },
+  "remoteUser": "vscode",
   "customizations": {
     "vscode": {
       "extensions": [
         "ms-python.python",
+        "ms-python.vscode-pylance",
         "dbaeumer.vscode-eslint",
         "dsznajder.es7-react-js-snippets"
-      ]
+      ],
+      "settings": {
+        "python.defaultInterpreterPath": ".venv/bin/python",
+        "terminal.integrated.defaultProfile.linux": "bash"
+      }
     }
   }
 }

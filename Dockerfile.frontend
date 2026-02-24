@@ -1,0 +1,43 @@
+# ============================================================
+# DRAVIS Frontend — Dockerfile
+# Stage 1: Build React app
+# Stage 2: nginx serves it, proxies /api/* to backend
+# ============================================================
+
+# ── Stage 1: Build ──────────────────────────────────────────
+FROM node:20-alpine AS builder
+
+WORKDIR /app
+
+# Install deps (cached unless package.json changes)
+COPY frontend/package.json frontend/package-lock.json* ./
+RUN npm ci --silent
+
+# Copy source and build
+COPY frontend/ ./
+# Use the Docker-specific env (API calls go through nginx proxy)
+ENV VITE_API_URL=/api
+ENV VITE_HEALTH_URL=/health-check
+RUN npm run build
+
+# ── Stage 2: nginx serving ───────────────────────────────────
+FROM nginx:alpine AS runner
+
+# Remove default nginx config
+RUN rm /etc/nginx/conf.d/default.conf
+
+# Copy our nginx config
+COPY nginx.conf /etc/nginx/conf.d/dravis.conf
+
+# Copy built React app
+COPY --from=builder /app/dist /usr/share/nginx/html
+
+# Copy the download landing page
+COPY landing/ /usr/share/nginx/landing/
+
+EXPOSE 80
+
+HEALTHCHECK --interval=30s --timeout=5s --retries=3 \
+    CMD curl -f http://localhost/ || exit 1
+
+CMD ["nginx", "-g", "daemon off;"]

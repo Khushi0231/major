@@ -1,4 +1,6 @@
-const API_BASE = "http://localhost:8000/api";
+// In Docker: VITE_API_URL=/api  (nginx proxies to backend)
+// Locally: VITE_API_URL=http://localhost:8000/api  (direct)
+const API_BASE = import.meta.env.VITE_API_URL ?? "http://localhost:8000/api";
 
 export async function sendMessage(
   message: string,

@@ -1,0 +1,47 @@
+.voice-controls {
+    border-top: 1px solid var(--border);
+    background: var(--bg-secondary);
+    padding: 16px;
+}
+
+.voice-controls-inner {
+    max-width: 800px;
+    margin: 0 auto;
+    display: flex;
+    justify-content: center;
+}
+
+.voice-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 24px;
+    border-radius: 8px;
+    font-weight: 500;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: 1px solid var(--border);
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+}
+
+.voice-btn:hover {
+    background: var(--bg-primary);
+    border-color: var(--accent);
+}
+
+.voice-btn.recording {
+    background: var(--error);
+    border-color: var(--error);
+    color: white;
+}
+
+.voice-btn.recording:hover {
+    opacity: 0.9;
+}
+
+.voice-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}

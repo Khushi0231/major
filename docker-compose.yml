@@ -1,24 +1,125 @@
 version: '3.8'
 
+# ============================================================
+# DRAVIS — Full Stack Docker Compose
+# Usage:
+#   docker-compose up --build        (CPU mode)
+#   docker-compose --profile gpu up  (NVIDIA GPU mode)
+# ============================================================
+
 services:
-  dravis:
+
+  # ──────────────────────────────────────────
+  # 1. Ollama — LLM Runtime (Mistral 7B)
+  # ──────────────────────────────────────────
+  ollama:
+    image: ollama/ollama:latest
+    container_name: dravis-ollama
+    restart: unless-stopped
+    volumes:
+      - ollama_data:/root/.ollama          # model cache persists across restarts
+    ports:
+      - "11434:11434"
+    environment:
+      - OLLAMA_KEEP_ALIVE=24h              # keep model loaded in VRAM
+      - OLLAMA_MAX_LOADED_MODELS=1
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 60s                    # give time to pull model on first run
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]          # NVIDIA GPU passthrough
+
+  # ──────────────────────────────────────────
+  # 2. Ollama Model Initializer
+  #    (pulls mistral:7b-instruct on first run)
+  # ──────────────────────────────────────────
+  ollama-init:
+    image: curlimages/curl:latest
+    container_name: dravis-ollama-init
+    restart: "no"
+    depends_on:
+      ollama:
+        condition: service_healthy
+    entrypoint: >
+      sh -c "
+        echo '🤖 Checking Mistral 7B Instruct model...' &&
+        curl -s http://ollama:11434/api/tags | grep -q 'mistral' &&
+        echo '✓ Model already cached' ||
+        (echo '📥 Pulling mistral:7b-instruct (first time ~4.5GB)...' &&
+         curl -X POST http://ollama:11434/api/pull
+           -H 'Content-Type: application/json'
+           -d '{\"name\":\"mistral:7b-instruct\",\"stream\":false}' &&
+         echo '✅ Model ready')
+      "
+
+  # ──────────────────────────────────────────
+  # 3. Backend — FastAPI + uvicorn
+  # ──────────────────────────────────────────
+  backend:
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.backend
+    container_name: dravis-backend
+    restart: unless-stopped
+    depends_on:
+      ollama:
+        condition: service_healthy
+    environment:
+      - OLLAMA_ENABLED=true
+      - OLLAMA_BASE_URL=http://ollama:11434
+      - OLLAMA_MODEL=mistral:7b-instruct
+      - MOCK_ENABLED=true                  # fallback if Ollama not ready
+      - API_HOST=0.0.0.0
+      - API_PORT=8000
+      - LOG_LEVEL=INFO
+    volumes:
+      - chroma_data:/app/chroma_db         # vector store persists
+      - dravis_data:/app/dravis_data       # sqlite db + uploads + pins
     ports:
       - "8000:8000"
-    environment:
-      - PYTHONUNBUFFERED=1
-      - HOST=0.0.0.0
-      - PORT=8000
-    volumes:
-      - ./chroma_db:/app/chroma_db
-      - ./dravis_data:/app/dravis_data
-      - ./backend:/app/backend
-    restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
+      interval: 20s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+  # ──────────────────────────────────────────
+  # 4. Frontend — nginx serving React build
+  # ──────────────────────────────────────────
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    container_name: dravis-frontend
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      - "80:80"
+      - "8080:80"                          # alternate port for Codespaces
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/"]
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 5s
+
+# ──────────────────────────────────────────
+# Named Volumes (data persists across restarts)
+# ──────────────────────────────────────────
+volumes:
+  ollama_data:
+    driver: local                          # ~4.5 GB — Mistral 7B lives here
+  chroma_data:
+    driver: local                          # ChromaDB vector embeddings
+  dravis_data:
+    driver: local                          # SQLite + uploads + PIN hash

@@ -1,0 +1,37 @@
+# ── Python ────────────────────────────────
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+.venv/
+venv/
+env/
+
+# ── Node ──────────────────────────────────
+frontend/node_modules/
+frontend/dist/
+frontend/.env.local
+
+# ── Data / Runtime ────────────────────────
+dravis_data/
+chroma_db/
+*.db
+*.log
+backend.log
+
+# ── Model files (managed by Ollama) ───────
+*.gguf
+*.bin
+*.safetensors
+
+# ── Dev tools ─────────────────────────────
+.env
+.DS_Store
+*.swp
+.idea/
+.vscode/
+
+# ── Git ───────────────────────────────────
+.git/

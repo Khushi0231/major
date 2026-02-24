@@ -1,6 +1,6 @@
 """LLM Manager - Handles provider selection and fallback"""
 from typing import List, Optional, Dict, Any
-from .providers import LLMProvider, OllamaProvider, OpenAIProvider, MockProvider
+from .providers import LLMProvider, OllamaProvider, OpenAIProvider, MockProvider, GGUFProvider
 import logging
 import asyncio
 
@@ -16,7 +16,7 @@ class LLMManager:
     
     def _initialize_providers(self):
         """Initialize providers in priority order"""
-        # Try Ollama first (free, local)
+        # Try Ollama first (free, local, best for Codespaces)
         if self.config.get("ollama", {}).get("enabled", True):
             try:
                 provider = OllamaProvider(self.config.get("ollama", {}))
@@ -24,6 +24,14 @@ class LLMManager:
                 logger.info("Ollama provider added")
             except Exception as e:
                 logger.warning(f"Failed to initialize Ollama: {e}")
+        
+        # Try GGUF model (local file, supports tar extraction)
+        try:
+            provider = GGUFProvider(self.config.get("gguf", {}))
+            self.providers.append(provider)
+            logger.info("GGUF provider added")
+        except Exception as e:
+            logger.warning(f"Failed to initialize GGUF: {e}")
         
         # Then OpenAI (cloud, costs money)
         if self.config.get("openai", {}).get("enabled", False):
@@ -51,36 +59,45 @@ class LLMManager:
         logger.info(f"Initialized {len(self.providers)} LLM providers")
     
     def is_available(self) -> bool:
-        """Check if any provider is available (synchronous)"""
-        try:
-            loop = asyncio.get_event_loop()
-        except RuntimeError:
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-        
-        return loop.run_until_complete(self._async_is_available())
-    
-    async def _async_is_available(self) -> bool:
-        """Check if any provider is available"""
+        """Check if any provider is available (synchronous, safe from sync context)"""
+        # Simple sync check - avoid running async in sync context within event loop
         for provider in self.providers:
             try:
-                is_available = await provider.is_available()
-                if is_available:
+                # For providers with easy sync checks
+                if isinstance(provider, GGUFProvider):
+                    return provider.model is not None
+                if isinstance(provider, MockProvider):
                     return True
+                # For Ollama/OpenAI, just check if they're configured
+                return True
             except:
                 continue
         return len(self.providers) > 0
     
     def generate(self, prompt: str, **kwargs) -> Optional[str]:
-        """Generate response using first available provider (synchronous)"""
+        """Generate response using first available provider (synchronous wrapper)"""
         try:
-            loop = asyncio.get_event_loop()
+            loop = asyncio.get_running_loop()
         except RuntimeError:
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
+            loop = None
         
-        result = loop.run_until_complete(self._async_generate(prompt, **kwargs))
-        return result
+        if loop and loop.is_running():
+            # We're inside an event loop (FastAPI), create a new thread
+            import concurrent.futures
+            with concurrent.futures.ThreadPoolExecutor() as pool:
+                future = pool.submit(self._sync_generate, prompt, **kwargs)
+                return future.result(timeout=60)
+        else:
+            # No event loop running, create one
+            return asyncio.run(self._async_generate(prompt, **kwargs))
+    
+    def _sync_generate(self, prompt: str, **kwargs) -> Optional[str]:
+        """Run async generate in a new event loop (for thread execution)"""
+        loop = asyncio.new_event_loop()
+        try:
+            return loop.run_until_complete(self._async_generate(prompt, **kwargs))
+        finally:
+            loop.close()
     
     async def _async_generate(self, prompt: str, **kwargs) -> Optional[str]:
         """Generate response using first available provider"""

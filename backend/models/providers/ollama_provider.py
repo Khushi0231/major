@@ -12,9 +12,9 @@ class OllamaProvider(LLMProvider):
     def __init__(self, config: Dict[str, Any]):
         super().__init__(config)
         self.base_url = config.get("base_url", "http://localhost:11434")
-        self.model = config.get("model", "llama3.1:8b")
-        self.timeout = config.get("timeout", 30)
-        logger.info(f"OllamaProvider initialized for {self.base_url}")
+        self.model = config.get("model", "mistral")
+        self.timeout = config.get("timeout", 120)  # Mistral 7B can take 30-60s
+        logger.info(f"OllamaProvider initialized for {self.base_url} with model {self.model}")
     
     async def generate(self, prompt: str, **kwargs) -> str:
         """Generate response using Ollama"""
