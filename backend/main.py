@@ -48,7 +48,7 @@ app = FastAPI(title=Config.API_TITLE, version=Config.API_VERSION)
 # CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=Config.CORS_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -342,5 +342,5 @@ async def set_pin_route(req: PINRequest):
 
 if __name__ == "__main__":
     import uvicorn
-    logger.info(f"Starting DRAVIS backend on {Config.HOST}:{Config.PORT}")
-    uvicorn.run(app, host=Config.HOST, port=Config.PORT)
+    logger.info(f"Starting DRAVIS backend on {Config.API_HOST}:{Config.API_PORT}")
+    uvicorn.run(app, host=Config.API_HOST, port=Config.API_PORT)

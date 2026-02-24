@@ -1,0 +1,91 @@
+# ─── MySQL ConfigMap + Secret ───────────────────
+apiVersion: v1
+kind: Secret
+metadata:
+  name: mysql-secret
+  namespace: dravis
+type: Opaque
+stringData:
+  MYSQL_ROOT_PASSWORD: dravis_root_2024
+  MYSQL_USER: dravis
+  MYSQL_PASSWORD: dravis_pass_2024
+---
+# ─── MySQL PVC ──────────────────────────────────
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mysql-pvc
+  namespace: dravis
+spec:
+  accessModes: [ReadWriteOnce]
+  resources:
+    requests:
+      storage: 5Gi
+---
+# ─── MySQL Deployment ──────────────────────────
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mysql
+  namespace: dravis
+  labels:
+    app: mysql
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mysql
+  template:
+    metadata:
+      labels:
+        app: mysql
+    spec:
+      containers:
+        - name: mysql
+          image: mysql:8.0
+          ports:
+            - containerPort: 3306
+          envFrom:
+            - secretRef:
+                name: mysql-secret
+          env:
+            - name: MYSQL_DATABASE
+              value: dravis
+          volumeMounts:
+            - name: mysql-storage
+              mountPath: /var/lib/mysql
+            - name: init-sql
+              mountPath: /docker-entrypoint-initdb.d
+          readinessProbe:
+            exec:
+              command: ["mysqladmin", "ping", "-h", "localhost"]
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          resources:
+            requests:
+              memory: "512Mi"
+              cpu: "250m"
+            limits:
+              memory: "1Gi"
+              cpu: "500m"
+      volumes:
+        - name: mysql-storage
+          persistentVolumeClaim:
+            claimName: mysql-pvc
+        - name: init-sql
+          configMap:
+            name: mysql-init
+---
+# ─── MySQL Service ─────────────────────────────
+apiVersion: v1
+kind: Service
+metadata:
+  name: mysql
+  namespace: dravis
+spec:
+  selector:
+    app: mysql
+  ports:
+    - port: 3306
+      targetPort: 3306
+  clusterIP: None
