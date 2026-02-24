@@ -488,30 +488,37 @@
   <div class="toast" id="toast"></div>
 
   <script>
-    const BASE = "https://raw.githubusercontent.com/Khushi0231/major/main/installers/";
     const FILES = {
-      mac: { file: "install-dravis-mac.command", label: "Download for Mac", cls: "primary" },
-      win: { file: "install-dravis-windows.ps1", label: "Download for Windows", cls: "sec" },
-      linux: { file: "install-dravis-linux.sh", label: "Download for Linux", cls: "sec" }
+      mac: { url: "https://github.com/Khushi0231/major/releases/latest/download/DRAVIS_Installer.dmg", label: "Download for Mac" },
+      win: { url: "https://github.com/Khushi0231/major/releases/latest/download/DRAVIS_Installer.exe", label: "Download for Windows" },
+      linux: { url: "https://raw.githubusercontent.com/Khushi0231/major/main/installers/install-dravis-linux.sh", label: "Download for Linux" }
     };
 
-    // Detect OS and put user's platform first
     const ua = navigator.userAgent;
     let order = ["mac", "win", "linux"];
     if (ua.includes("Win")) order = ["win", "mac", "linux"];
     else if (ua.includes("Linux")) order = ["linux", "mac", "win"];
-    // First button is always primary
+
     const row = document.getElementById("dl-row");
     order.forEach((key, i) => {
       const f = FILES[key];
       const btn = document.createElement("a");
-      btn.href = BASE + f.file;
-      btn.download = f.file;
       btn.className = "dl-btn " + (i === 0 ? "primary" : "sec");
       btn.textContent = f.label;
-      btn.addEventListener("click", () => showToast("Downloading installer..."));
+      btn.href = f.url;
+      if (key === "linux") {
+        btn.target = "_blank";
+        btn.download = "install-dravis-linux.sh";
+      }
+      btn.onclick = () => showToast("Downloading installer...");
       row.appendChild(btn);
     });
+
+    function showToast(msg) {
+      const t = document.getElementById("toast");
+      t.textContent = msg; t.classList.add("show");
+      setTimeout(() => t.classList.remove("show"), 2000);
+    }
 
     function copyCmd(btn) {
       const t = btn.previousElementSibling.textContent;

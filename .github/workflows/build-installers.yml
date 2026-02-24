@@ -1,0 +1,87 @@
+name: Build Installers (.exe & .dmg)
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build Windows EXE
+        shell: powershell
+        run: |
+          Install-Module ps2exe -Force -Scope CurrentUser -AcceptLicense
+          Invoke-ps2exe .\installers\install-dravis-windows.ps1 .\DRAVIS_Installer.exe -requireAdmin
+
+      - name: Upload EXE Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-installer
+          path: DRAVIS_Installer.exe
+
+  build-mac:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build Mac APP and DMG
+        run: |
+          # 1. Create native AppleScript to wrap the bash command
+          cat << 'EOF' > run.applescript
+          set appPath to POSIX path of (path to me)
+          set scriptPath to appPath & "Contents/Resources/install-dravis-mac.command"
+          tell application "Terminal"
+              activate
+              do script "bash '" & scriptPath & "'"
+          end tell
+          EOF
+          
+          # 2. Compile it to a native .app bundle
+          osacompile -o "DRAVIS Installer.app" run.applescript
+          
+          # 3. Copy our installer script into the app bundle
+          cp installers/install-dravis-mac.command "DRAVIS Installer.app/Contents/Resources/"
+          chmod +x "DRAVIS Installer.app/Contents/Resources/install-dravis-mac.command"
+          
+          # 4. Package into a clean .dmg file
+          hdiutil create -volname "DRAVIS Installer" -srcfolder "DRAVIS Installer.app" -ov -format UDZO DRAVIS_Installer.dmg
+
+      - name: Upload DMG Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: mac-installer
+          path: DRAVIS_Installer.dmg
+
+  release:
+    needs: [build-windows, build-mac]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download Windows EXE
+        uses: actions/download-artifact@v4
+        with:
+          name: windows-installer
+
+      - name: Download Mac DMG
+        uses: actions/download-artifact@v4
+        with:
+          name: mac-installer
+
+      - name: Publish to GitHub Releases
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: latest
+          name: "DRAVIS Installers (Latest)"
+          draft: false
+          prerelease: false
+          files: |
+            DRAVIS_Installer.exe
+            DRAVIS_Installer.dmg
