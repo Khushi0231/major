@@ -1,1 +1,10 @@
-version: '3.8'\nservices:\n  llama:\n    image: meta-llama/Llama-2-8b\n    volumes:\n      - ./data:/data\n    environment:\n      - MODEL_PATH=/data/llama-2-8b\n      - OFFLINE_MODE=true\n    restart: always\n  other_service:\n    image: some_other_service_image\n    ports:\n      - '8080:8080'\n    depends_on:\n      - llama\n
+version: '3'
+services:
+  model-service:
+    image: llama2:8b
+    volumes:
+      - ./model:/app/model
+    deploy:
+      resources:
+        limits:
+          memory: 700M
