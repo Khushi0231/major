@@ -1,3 +1,4 @@
+/* ── Quiz Panel ── */
 .quiz-panel {
   display: flex;
   flex-direction: column;
@@ -6,13 +7,13 @@
 }
 
 .quiz-header {
-  padding: 16px;
+  padding: 14px 20px;
   border-bottom: 1px solid var(--border);
   background: var(--bg-secondary);
 }
 
 .quiz-title {
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 600;
   color: var(--text-primary);
   margin-bottom: 12px;
@@ -20,7 +21,7 @@
 
 .quiz-controls {
   display: flex;
-  gap: 12px;
+  gap: 8px;
 }
 
 .quiz-input {
@@ -28,105 +29,115 @@
   padding: 8px 12px;
   background: var(--bg-tertiary);
   border: 1px solid var(--border);
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   color: var(--text-primary);
-  font-size: 13px;
+  font-size: 12px;
+  font-family: inherit;
+  transition: border-color var(--transition);
 }
 
 .quiz-input::placeholder {
-  color: var(--text-secondary);
+  color: var(--text-dim);
+}
+
+.quiz-input:focus {
+  outline: none;
+  border-color: var(--accent);
 }
 
 .generate-btn {
   padding: 8px 16px;
-  background: var(--accent);
-  border: none;
-  border-radius: 6px;
-  color: white;
-  font-size: 13px;
+  background: var(--accent-soft);
+  border: 1px solid rgba(99, 102, 241, 0.2);
+  border-radius: var(--radius-sm);
+  color: var(--accent-hover);
+  font-size: 12px;
+  font-weight: 500;
   cursor: pointer;
-  transition: opacity 0.2s;
+  transition: all var(--transition);
+  font-family: inherit;
 }
 
 .generate-btn:hover:not(:disabled) {
-  opacity: 0.9;
+  background: rgba(99, 102, 241, 0.18);
 }
 
 .generate-btn:disabled {
-  opacity: 0.5;
+  opacity: 0.3;
   cursor: not-allowed;
 }
 
 .quiz-content {
   flex: 1;
   overflow-y: auto;
-  padding: 16px;
+  padding: 16px 20px;
 }
 
 .quiz-questions {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 12px;
 }
 
 .question-card {
   padding: 16px;
   background: var(--bg-secondary);
   border: 1px solid var(--border);
-  border-radius: 8px;
-  transition: all 0.2s;
+  border-radius: var(--radius);
+  transition: border-color var(--transition);
 }
 
 .question-card:hover {
-  border-color: var(--accent);
-  background: var(--bg-tertiary);
+  border-color: var(--text-dim);
 }
 
 .question-text {
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
   color: var(--text-primary);
-  margin-bottom: 12px;
+  margin-bottom: 10px;
+  line-height: 1.5;
 }
 
 .question-options {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
 }
 
 .option {
-  padding: 10px 12px;
+  padding: 9px 12px;
   background: var(--bg-primary);
   border: 1px solid var(--border);
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   cursor: pointer;
-  font-size: 13px;
-  color: var(--text-primary);
-  transition: all 0.2s;
+  font-size: 12px;
+  color: var(--text-secondary);
+  transition: all var(--transition);
+  font-family: inherit;
 }
 
 .option:hover {
-  border-color: var(--accent);
-  background: var(--bg-tertiary);
+  border-color: var(--text-dim);
+  color: var(--text-primary);
 }
 
 .option.selected {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: white;
+  background: var(--accent-soft);
+  border-color: rgba(99, 102, 241, 0.3);
+  color: var(--accent-hover);
 }
 
 .option.correct {
-  background: var(--success);
-  border-color: var(--success);
-  color: white;
+  background: rgba(52, 211, 153, 0.1);
+  border-color: rgba(52, 211, 153, 0.3);
+  color: var(--success);
 }
 
 .option.incorrect {
-  background: var(--error);
-  border-color: var(--error);
-  color: white;
+  background: rgba(248, 113, 113, 0.1);
+  border-color: rgba(248, 113, 113, 0.3);
+  color: var(--error);
 }
 
 .quiz-empty {
@@ -135,24 +146,19 @@
   align-items: center;
   justify-content: center;
   height: 100%;
-  color: var(--text-secondary);
+  color: var(--text-dim);
   text-align: center;
-}
-
-.empty-icon {
-  font-size: 48px;
-  margin-bottom: 16px;
-  opacity: 0.5;
+  font-size: 13px;
 }
 
 .loading-spinner {
   display: inline-block;
-  width: 20px;
-  height: 20px;
+  width: 16px;
+  height: 16px;
   border: 2px solid var(--border);
   border-top-color: var(--accent);
   border-radius: 50%;
-  animation: spin 1s linear infinite;
+  animation: spin 0.8s linear infinite;
 }
 
 @keyframes spin {
@@ -168,9 +174,5 @@
 
   .quiz-input {
     width: 100%;
-  }
-
-  .question-card {
-    padding: 12px;
   }
 }

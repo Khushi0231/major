@@ -5,10 +5,8 @@ import './DocumentsPanel.css';
 interface Document {
   document_id: string;
   document_name: string;
-  file_size: number;
+  upload_time: string;
   chunk_count: number;
-  status: string;
-  created_at: string;
 }
 
 export default function DocumentsPanel({

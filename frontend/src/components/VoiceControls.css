@@ -1,7 +1,8 @@
+/* ── Voice Controls ── */
 .voice-controls {
     border-top: 1px solid var(--border);
     background: var(--bg-secondary);
-    padding: 16px;
+    padding: 12px 20px;
 }
 
 .voice-controls-inner {
@@ -14,34 +15,36 @@
 .voice-btn {
     display: flex;
     align-items: center;
-    gap: 8px;
-    padding: 10px 24px;
-    border-radius: 8px;
+    gap: 6px;
+    padding: 8px 18px;
+    border-radius: var(--radius-sm);
     font-weight: 500;
-    font-size: 13px;
+    font-size: 12px;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: all var(--transition);
     border: 1px solid var(--border);
     background: var(--bg-tertiary);
-    color: var(--text-primary);
+    color: var(--text-secondary);
+    font-family: inherit;
 }
 
 .voice-btn:hover {
-    background: var(--bg-primary);
-    border-color: var(--accent);
+    background: var(--bg-hover);
+    color: var(--text-primary);
+    border-color: var(--text-dim);
 }
 
 .voice-btn.recording {
-    background: var(--error);
-    border-color: var(--error);
-    color: white;
+    background: rgba(248, 113, 113, 0.12);
+    border-color: rgba(248, 113, 113, 0.3);
+    color: var(--error);
 }
 
 .voice-btn.recording:hover {
-    opacity: 0.9;
+    opacity: 0.85;
 }
 
 .voice-btn:disabled {
-    opacity: 0.5;
+    opacity: 0.3;
     cursor: not-allowed;
 }

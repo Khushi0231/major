@@ -1,3 +1,4 @@
+/* ── PIN Lock ── */
 .pin-lock-overlay {
   display: flex;
   align-items: center;
@@ -7,34 +8,35 @@
 }
 
 .pin-lock-loading {
-  color: var(--accent);
-  font-size: 18px;
+  color: var(--text-dim);
+  font-size: 14px;
 }
 
 .pin-lock-card {
   background: var(--bg-secondary);
-  padding: 32px;
-  border-radius: 12px;
-  width: 400px;
+  padding: 40px 32px;
+  border-radius: var(--radius);
+  width: 360px;
   max-width: 90%;
   border: 1px solid var(--border);
   text-align: center;
 }
 
 .pin-lock-header {
-  margin-bottom: 24px;
+  margin-bottom: 28px;
 }
 
 .pin-lock-title {
-  font-size: 28px;
+  font-size: 18px;
   font-weight: 700;
-  color: var(--accent);
-  margin-bottom: 8px;
+  color: var(--text-primary);
+  letter-spacing: 1px;
+  margin-bottom: 6px;
 }
 
 .pin-lock-subtitle {
-  font-size: 13px;
-  color: var(--text-secondary);
+  font-size: 12px;
+  color: var(--text-dim);
 }
 
 .pin-lock-form {
@@ -46,20 +48,21 @@
 .pin-lock-inputs {
   display: flex;
   justify-content: center;
-  gap: 8px;
+  gap: 10px;
 }
 
 .pin-lock-digit {
-  width: 48px;
-  height: 48px;
+  width: 44px;
+  height: 44px;
   text-align: center;
-  font-size: 22px;
+  font-size: 20px;
   font-weight: 600;
   background: var(--bg-tertiary);
   color: var(--text-primary);
-  border: 2px solid var(--border);
-  border-radius: 8px;
-  transition: border-color 0.2s;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  transition: border-color var(--transition);
+  font-family: inherit;
 }
 
 .pin-lock-digit:focus {
@@ -69,28 +72,28 @@
 
 .pin-lock-error {
   color: var(--error);
-  font-size: 13px;
-  text-align: center;
+  font-size: 12px;
 }
 
 .pin-lock-submit {
   width: 100%;
-  padding: 12px;
-  background: var(--accent);
-  color: white;
-  border: none;
-  border-radius: 8px;
-  font-size: 14px;
+  padding: 10px;
+  background: var(--accent-soft);
+  color: var(--accent-hover);
+  border: 1px solid rgba(99, 102, 241, 0.2);
+  border-radius: var(--radius-sm);
+  font-size: 13px;
   font-weight: 600;
   cursor: pointer;
-  transition: opacity 0.2s;
+  transition: all var(--transition);
+  font-family: inherit;
 }
 
 .pin-lock-submit:hover:not(:disabled) {
-  opacity: 0.9;
+  background: rgba(99, 102, 241, 0.18);
 }
 
 .pin-lock-submit:disabled {
-  opacity: 0.5;
+  opacity: 0.3;
   cursor: not-allowed;
 }

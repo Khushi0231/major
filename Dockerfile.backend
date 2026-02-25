@@ -8,10 +8,18 @@ FROM python:3.11-slim
 WORKDIR /app
 
 # Install Python deps first (cached layer)
-# All packages have pre-built wheels — no compilation needed
+# Split into 2 stages: lightweight deps first, then heavy ML deps with retries
 COPY backend/requirements.txt ./requirements.txt
+
+# Stage 1: Install lightweight deps (everything except torch/sentence-transformers)
 RUN pip install --no-cache-dir --upgrade pip \
- && pip install --no-cache-dir -r requirements.txt
+ && grep -v -E "^(torch|sentence-transformers|--extra-index)" requirements.txt > req-light.txt \
+ && pip install --no-cache-dir -r req-light.txt
+
+# Stage 2: Install ML deps with retries (torch download can be flaky in Docker)
+RUN pip install --no-cache-dir --retries 10 --timeout 120 \
+    --extra-index-url https://download.pytorch.org/whl/cpu \
+    torch sentence-transformers>=2.2.2
 
 # Copy backend source
 COPY backend/ ./backend/
