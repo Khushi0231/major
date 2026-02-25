@@ -7,3 +7,6 @@ cryptography==41.0.7
 requests==2.31.0
 httpx==0.25.2
 openai==1.6.1
+# LangChain + Ollama (primary LLM engine)
+langchain-core>=0.3.0
+langchain-ollama>=0.2.0

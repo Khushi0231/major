@@ -1,11 +1,22 @@
 """LLM Manager - Provider selection with automatic fallback
 
-Priority order: Ollama (local) → OpenAI (cloud) → Mock (testing)
-If Ollama is down, transparently falls through to the next available provider.
+Priority order:
+  1. LangChain + Ollama (primary, local, offline)
+  2. Ollama raw API (fallback local — uses Mistral)
+  3. Groq (cloud, fast, same models as Ollama)
+  4. OpenAI (cloud fallback)
+  5. Mock (testing safety net)
 """
 import logging
 from typing import Optional, Dict, Any, List
-from .providers import LLMProvider, OllamaProvider, OpenAIProvider, GroqProvider, MockProvider
+from .providers import (
+    LLMProvider,
+    LangChainOllamaProvider,
+    OllamaProvider,
+    OpenAIProvider,
+    GroqProvider,
+    MockProvider,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -18,15 +29,24 @@ class LLMManager:
         self._init_providers(config)
 
     def _init_providers(self, config: Dict[str, Any]) -> None:
-        # 1. Ollama (free, local, primary)
+        # 1. LangChain + Ollama (PRIMARY — local, offline, free)
         ollama_cfg = config.get("ollama", {})
         try:
-            self.providers.append(OllamaProvider(ollama_cfg))
-            logger.info("Ollama provider registered")
+            self.providers.append(LangChainOllamaProvider(ollama_cfg))
+            logger.info("LangChain+Ollama provider registered (PRIMARY)")
         except Exception as e:
-            logger.warning(f"Ollama init skipped: {e}")
+            logger.warning(f"LangChain+Ollama init skipped: {e}")
 
-        # 2. Groq (High-speed cloud, same models as Ollama, zero storage)
+        # 2. Raw Ollama API (SECONDARY — Mistral model fallback)
+        mistral_cfg = config.get("mistral", {})
+        if mistral_cfg.get("base_url"):
+            try:
+                self.providers.append(OllamaProvider(mistral_cfg))
+                logger.info("Ollama/Mistral provider registered (SECONDARY)")
+            except Exception as e:
+                logger.warning(f"Ollama/Mistral init skipped: {e}")
+
+        # 3. Groq (cloud, high-speed, same models)
         groq_cfg = config.get("groq", {})
         if groq_cfg.get("api_key"):
             try:
@@ -35,7 +55,7 @@ class LLMManager:
             except Exception as e:
                 logger.warning(f"Groq init skipped: {e}")
 
-        # 3. OpenAI (cloud fallback)
+        # 4. OpenAI (cloud fallback)
         openai_cfg = config.get("openai", {})
         if openai_cfg.get("api_key"):
             try:
@@ -44,7 +64,7 @@ class LLMManager:
             except Exception as e:
                 logger.warning(f"OpenAI init skipped: {e}")
 
-        # 4. Mock (always-on safety net)
+        # 5. Mock (always-on safety net)
         self.providers.append(MockProvider({}))
         logger.info(f"LLM Manager ready with {len(self.providers)} provider(s)")
 

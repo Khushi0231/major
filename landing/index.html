@@ -364,10 +364,11 @@
   <div class="w">
     <section class="hero">
       <h1>Your AI study assistant.<br>Entirely offline.</h1>
-      <p>DRAVIS runs Mistral 7B locally via Ollama. No cloud, no API keys, no limits. Upload docs, chat, generate
-        quizzes ΓÇö all on your machine.</p>
-      <div class="dl-row" id="dl-row"></div>
-      <div class="meta">Requires Docker ┬╖ ~6 GB disk ┬╖ 16 GB RAM recommended</div>
+      <p>DRAVIS runs LLaMA &amp; Mistral locally via Ollama. No cloud, no API keys, no limits. Upload docs, chat,
+        generate
+        quizzes — all on your machine.</p>
+      <div class="dl-row" id="dl-row"><span class="meta" id="dl-status">Loading latest release…</span></div>
+      <div class="meta">Native desktop app · No Docker needed · ~2 GB on first launch</div>
     </section>
   </div>
 
@@ -381,23 +382,24 @@
       <div class="steps">
         <div class="step">
           <div>
-            <h4>Download the installer</h4>
-            <p>One file per platform. On Mac/Linux open Terminal and run it. On Windows, save the file then
-              right-click it → <strong>"Run with PowerShell"</strong>.</p>
+            <h4>1. Download DRAVIS</h4>
+            <p>Click the download button for your platform. You get a native installer — <code>.exe</code> for Windows,
+              <code>.dmg</code> for Mac, <code>.AppImage</code> for Linux. No Docker, no terminal.</p>
           </div>
         </div>
         <div class="step">
           <div>
-            <h4>It handles everything</h4>
-            <p>Installs Docker if needed, downloads pre-built DRAVIS images, pulls Mistral 7B (~4.5 GB, one time only).
-            </p>
+            <h4>2. Install like any app</h4>
+            <p>Run the installer. DRAVIS installs to your Applications folder / Program Files just like any other
+              desktop app. <strong>Ollama must be installed</strong> — <a href="https://ollama.com" target="_blank">get
+                it free here</a>.</p>
           </div>
         </div>
         <div class="step">
           <div>
-            <h4>Open localhost</h4>
-            <p>Your browser opens to <strong>http://localhost</strong>. Start chatting with your private AI. Fully
-              offline from now on.</p>
+            <h4>3. Open &amp; go</h4>
+            <p>Launch DRAVIS. On first run it downloads the AI model (~2 GB, one time only). After that — fully offline,
+              no internet needed.</p>
           </div>
         </div>
       </div>
@@ -488,52 +490,85 @@
   <div class="toast" id="toast"></div>
 
   <script>
-    const BASE = "https://raw.githubusercontent.com/Khushi0231/major/main/installers/";
-    const FILES = {
-      win: {
-        url: BASE + "install-dravis-windows.ps1",
-        filename: "install-dravis-windows.ps1",
-        label: "⊞ Download for Windows"
-      },
-      mac: {
-        url: BASE + "install-dravis-mac.sh",
-        filename: "install-dravis-mac.sh",
-        label: "⌘ Download for Mac"
-      },
-      linux: {
-        url: BASE + "install-dravis-linux.sh",
-        filename: "install-dravis-linux.sh",
-        label: "🐧 Download for Linux"
-      }
+    const REPO = "Khushi0231/major";
+    const RELEASES_URL = `https://github.com/${REPO}/releases/latest`;
+    const API_URL = `https://api.github.com/repos/${REPO}/releases/latest`;
+
+    // Asset patterns to match per platform
+    const PLATFORM = {
+      win: { pattern: /\.exe$/i, label: "⊞ Download for Windows", ext: ".exe" },
+      mac: { pattern: /\.dmg$/i, label: "⌘ Download for Mac", ext: ".dmg" },
+      linux: { pattern: /\.AppImage$/i, label: "🐧 Download for Linux", ext: ".AppImage" },
     };
 
     const ua = navigator.userAgent;
     let order = ["mac", "win", "linux"];
     if (ua.includes("Win")) order = ["win", "mac", "linux"];
-    else if (ua.includes("Linux")) order = ["linux", "mac", "win"];
+    else if (!ua.includes("Mac")) order = ["linux", "mac", "win"];
 
     const row = document.getElementById("dl-row");
-    order.forEach((key, i) => {
-      const f = FILES[key];
-      const btn = document.createElement("a");
-      btn.className = "dl-btn " + (i === 0 ? "primary" : "sec");
-      btn.textContent = f.label;
-      btn.href = f.url;
-      btn.download = f.filename;
-      btn.onclick = () => showToast("Downloading installer...");
-      row.appendChild(btn);
-    });
+    const status = document.getElementById("dl-status");
+
+    async function loadRelease() {
+      try {
+        const res = await fetch(API_URL);
+        const data = await res.json();
+        const assets = data.assets || [];
+        const tag = data.tag_name || "";
+
+        // Build a lookup: platform key → download URL
+        const urls = {};
+        for (const [key, cfg] of Object.entries(PLATFORM)) {
+          const asset = assets.find(a => cfg.pattern.test(a.name));
+          urls[key] = asset ? asset.browser_download_url : null;
+        }
+
+        status && status.remove();
+
+        order.forEach((key, i) => {
+          const cfg = PLATFORM[key];
+          const url = urls[key];
+          const btn = document.createElement("a");
+          btn.className = "dl-btn " + (i === 0 ? "primary" : "sec");
+          btn.textContent = cfg.label + (tag ? " " + tag : "");
+          if (url) {
+            btn.href = url;
+            btn.onclick = () => showToast("Downloading " + cfg.ext + "…");
+          } else {
+            btn.href = RELEASES_URL;
+            btn.target = "_blank";
+            btn.title = "See all releases on GitHub";
+          }
+          row.appendChild(btn);
+        });
+
+      } catch (_) {
+        // Fallback: send to releases page
+        if (status) status.textContent = "";
+        ["win", "mac", "linux"].forEach((key, i) => {
+          const cfg = PLATFORM[key];
+          const btn = document.createElement("a");
+          btn.className = "dl-btn " + (i === 0 ? "primary" : "sec");
+          btn.href = RELEASES_URL;
+          btn.target = "_blank";
+          btn.textContent = cfg.label;
+          row.appendChild(btn);
+        });
+      }
+    }
+
+    loadRelease();
 
     function showToast(msg) {
       const t = document.getElementById("toast");
       t.textContent = msg; t.classList.add("show");
-      setTimeout(() => t.classList.remove("show"), 2000);
+      setTimeout(() => t.classList.remove("show"), 2500);
     }
 
     function copyCmd(btn) {
       const t = btn.previousElementSibling.textContent;
       navigator.clipboard.writeText(t).then(() => {
-        btn.textContent = "Γ£ô";
+        btn.textContent = "✔";
         setTimeout(() => btn.textContent = "Copy", 1500);
         showToast("Copied!");
       });

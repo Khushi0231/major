@@ -25,6 +25,12 @@ _llm = LLMManager({
         "base_url": settings.OLLAMA_BASE_URL,
         "model": settings.OLLAMA_MODEL,
         "timeout": settings.OLLAMA_TIMEOUT,
+        "temperature": 0.7,
+    },
+    "mistral": {
+        "base_url": settings.OLLAMA_BASE_URL,
+        "model": "mistral",
+        "timeout": settings.OLLAMA_TIMEOUT,
     },
     "openai": {
         "api_key": settings.OPENAI_API_KEY,
