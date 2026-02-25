@@ -67,6 +67,28 @@ services:
       - dravis-net
     restart: unless-stopped
 
+  llm:
+    build:
+      context: ./services/llm
+      dockerfile: Dockerfile
+    image: dravis-llm:latest
+    container_name: dravis-llm
+    environment:
+      - MODEL_NAME=${OLLAMA_MODEL:-mistral}
+    volumes:
+      - ollama_data:/root/.ollama
+    ports:
+      - "11434:11434"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:11434/api/tags"]
+      interval: 15s
+      timeout: 10s
+      retries: 20
+      start_period: 30s
+    networks:
+      - dravis-net
+    restart: unless-stopped
+
   chat:
     build:
       context: ./services/chat
@@ -74,8 +96,8 @@ services:
     container_name: dravis-chat
     environment:
       - DATABASE_URL=mysql+pymysql://${MYSQL_USER:-dravis}:${MYSQL_PASSWORD:-dravis_pass_2024}@mysql:3306/dravis
-      - OLLAMA_BASE_URL=${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
-      - OLLAMA_MODEL=${OLLAMA_MODEL:-llama3.1:8b}
+      - OLLAMA_BASE_URL=http://llm:11434
+      - OLLAMA_MODEL=${OLLAMA_MODEL:-mistral}
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
       - OPENAI_MODEL=${OPENAI_MODEL:-gpt-3.5-turbo}
       - DOCUMENT_SERVICE_URL=http://document:8003
@@ -85,8 +107,8 @@ services:
     depends_on:
       mysql:
         condition: service_healthy
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
+      llm:
+        condition: service_healthy
     networks:
       - dravis-net
     restart: unless-stopped
@@ -179,3 +201,4 @@ volumes:
   chroma_data:
   uploads_data:
   model_cache:
+  ollama_data:

@@ -1,75 +1,91 @@
 #!/bin/bash
-# DRAVIS Installer for Linux
-# Run: bash install-dravis-linux.sh
+# ================================================================
+#  DRAVIS Installer for Linux
+#  Run: curl -fsSL https://raw.githubusercontent.com/Khushi0231/major/main/installers/install-dravis-linux.sh | bash
+#  Or:  bash install-dravis-linux.sh
+# ================================================================
 
 set -e
 
-echo "=========================================="
-echo "    DRAVIS AI Installer for Linux         "
-echo "=========================================="
+echo ""
+echo "  ========================================"
+echo "       DRAVIS — AI Study Assistant"
+echo "       One-click offline installer"
+echo "  ========================================"
 echo ""
 
-# Check for Docker
-echo "Checking for Docker..."
+# ─── Check Docker ────────────────────────────────
+echo "[1/4] Checking Docker..."
 if ! command -v docker &> /dev/null; then
-    echo "[INFO] Docker not found. Attempting to install..."
-    curl -fsSL https://get.docker.com -o get-docker.sh
-    sudo sh get-docker.sh
-    sudo usermod -aG docker $USER
-    rm get-docker.sh
-    echo "[OK] Docker installed. Please log out and log back in, then re-run this script."
+    echo "  Docker not found. Installing..."
+    curl -fsSL https://get.docker.com | sh
+    sudo usermod -aG docker "$USER"
+    echo ""
+    echo "  Docker installed! Please log out and log back in, then re-run this script."
     exit 0
 fi
-echo "[OK] Docker found."
 
-# Check for docker-compose
-echo "Checking for docker-compose..."
-if ! command -v docker-compose &> /dev/null; then
-    echo "[INFO] docker-compose not found. Installing..."
-    sudo curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" \
-         -o /usr/local/bin/docker-compose
-    sudo chmod +x /usr/local/bin/docker-compose
+if ! docker info &> /dev/null; then
+    echo "  Docker is installed but the daemon isn't running."
+    echo "  Try: sudo systemctl start docker"
+    echo "  Then re-run this script."
+    exit 1
 fi
-echo "[OK] docker-compose found."
+echo "  [OK] Docker is running."
 
-# Check for Git
-echo "Checking for Git..."
+# ─── Check docker compose ────────────────────────
+echo "[2/4] Checking docker compose..."
+if ! docker compose version &> /dev/null; then
+    echo "  docker compose plugin not found. Installing..."
+    sudo apt-get update -qq && sudo apt-get install -y -qq docker-compose-plugin 2>/dev/null \
+      || sudo dnf install -y docker-compose-plugin 2>/dev/null \
+      || { echo "Please install docker compose manually."; exit 1; }
+fi
+echo "  [OK] docker compose found."
+
+# ─── Check Git ───────────────────────────────────
+echo "[3/4] Checking Git..."
 if ! command -v git &> /dev/null; then
-    sudo apt-get install -y git 2>/dev/null || sudo yum install -y git 2>/dev/null || sudo dnf install -y git 2>/dev/null
+    sudo apt-get install -y git 2>/dev/null \
+      || sudo dnf install -y git 2>/dev/null \
+      || sudo pacman -S --noconfirm git 2>/dev/null
 fi
-echo "[OK] Git found."
-echo ""
+echo "  [OK] Git found."
 
-# Clone or update the repo
-TARGET_DIR="$HOME/dravis"
+# ─── Clone DRAVIS ────────────────────────────────
+echo "[4/4] Setting up DRAVIS..."
+INSTALL_DIR="$HOME/DRAVIS"
 
-if [ -d "$TARGET_DIR" ]; then
-    echo "DRAVIS folder already exists. Updating to latest version..."
-    cd "$TARGET_DIR"
-    git pull
+if [ -f "$INSTALL_DIR/docker-compose.yml" ]; then
+    echo "  DRAVIS already installed. Updating..."
+    cd "$INSTALL_DIR"
+    git pull origin main 2>/dev/null || true
 else
-    echo "Cloning DRAVIS repository..."
-    git clone https://github.com/Khushi0231/major.git "$TARGET_DIR"
-    cd "$TARGET_DIR"
+    echo "  Downloading DRAVIS..."
+    git clone --depth 1 https://github.com/Khushi0231/major.git "$INSTALL_DIR"
+    cd "$INSTALL_DIR"
 fi
 
+# ─── Start DRAVIS ────────────────────────────────
 echo ""
-echo "Starting DRAVIS..."
-echo "(First launch downloads the Mistral AI model — about 4.5GB. Please be patient!)"
+echo "  Starting DRAVIS..."
+echo "  First launch downloads the Mistral 7B AI model (~4.5 GB)."
+echo "  This is a one-time download. Please be patient!"
 echo ""
 
-# Start the application
-docker-compose up -d
+docker compose up --build -d
 
 echo ""
-echo "Waiting for DRAVIS to come online..."
-sleep 15
-
-# Try to open browser
-xdg-open http://localhost:8080 2>/dev/null || echo "Open your browser to: http://localhost:8080"
+echo "  Waiting for services..."
+sleep 20
 
 echo ""
-echo "=========================================="
-echo " SUCCESS! DRAVIS is running!"
-echo " Visit: http://localhost:8080"
-echo "=========================================="
+echo "  ========================================"
+echo "   DRAVIS is starting!"
+echo ""
+echo "   Open:  http://localhost:8080"
+echo "   Stop:  cd ~/DRAVIS && docker compose down"
+echo "  ========================================"
+echo ""
+
+xdg-open http://localhost:8080 2>/dev/null || echo "  Open http://localhost:8080 in your browser"

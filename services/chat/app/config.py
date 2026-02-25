@@ -7,7 +7,7 @@ class Settings:
     SERVICE_PORT: int = int(os.getenv("SERVICE_PORT", "8002"))
     DATABASE_URL: str = os.getenv(
         "DATABASE_URL",
-        "mysql+pymysql://dravis:dravis_pass_2024@localhost:3306/dravis",
+        "sqlite:///./dravis_chat.db",
     )
     LOG_LEVEL: str = os.getenv("LOG_LEVEL", "INFO")
 
@@ -20,6 +20,10 @@ class Settings:
     OPENAI_API_KEY: str = os.getenv("OPENAI_API_KEY", "")
     OPENAI_MODEL: str = os.getenv("OPENAI_MODEL", "gpt-3.5-turbo")
     OPENAI_TEMPERATURE: float = float(os.getenv("OPENAI_TEMPERATURE", "0.7"))
+
+    # LLM - Groq (optional cloud, same models as Ollama, zero storage)
+    GROQ_API_KEY: str = os.getenv("GROQ_API_KEY", "")
+    GROQ_MODEL: str = os.getenv("GROQ_MODEL", "llama-3.1-8b-instant")  # Matches llama3.1:8b in Ollama
 
     # Inter-service
     DOCUMENT_SERVICE_URL: str = os.getenv("DOCUMENT_SERVICE_URL", "http://localhost:8003")

@@ -5,7 +5,7 @@ If Ollama is down, transparently falls through to the next available provider.
 """
 import logging
 from typing import Optional, Dict, Any, List
-from .providers import LLMProvider, OllamaProvider, OpenAIProvider, MockProvider
+from .providers import LLMProvider, OllamaProvider, OpenAIProvider, GroqProvider, MockProvider
 
 logger = logging.getLogger(__name__)
 
@@ -26,7 +26,16 @@ class LLMManager:
         except Exception as e:
             logger.warning(f"Ollama init skipped: {e}")
 
-        # 2. OpenAI (cloud fallback)
+        # 2. Groq (High-speed cloud, same models as Ollama, zero storage)
+        groq_cfg = config.get("groq", {})
+        if groq_cfg.get("api_key"):
+            try:
+                self.providers.append(GroqProvider(groq_cfg))
+                logger.info("Groq provider registered")
+            except Exception as e:
+                logger.warning(f"Groq init skipped: {e}")
+
+        # 3. OpenAI (cloud fallback)
         openai_cfg = config.get("openai", {})
         if openai_cfg.get("api_key"):
             try:
@@ -35,7 +44,7 @@ class LLMManager:
             except Exception as e:
                 logger.warning(f"OpenAI init skipped: {e}")
 
-        # 3. Mock (always-on safety net)
+        # 4. Mock (always-on safety net)
         self.providers.append(MockProvider({}))
         logger.info(f"LLM Manager ready with {len(self.providers)} provider(s)")
 

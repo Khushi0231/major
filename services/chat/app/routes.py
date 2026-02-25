@@ -31,6 +31,10 @@ _llm = LLMManager({
         "model": settings.OPENAI_MODEL,
         "temperature": settings.OPENAI_TEMPERATURE,
     },
+    "groq": {
+        "api_key": settings.GROQ_API_KEY,
+        "model": settings.GROQ_MODEL,
+    },
 })
 
 MODE_PROMPTS = {

@@ -104,6 +104,25 @@ docker-compose up
 # Everyone has identical environment!
 ```
 
+## Option 5: Containerized LLM Engine (BEST for Distribution) 🏆
+
+We now provide a dedicated `llm` service in `docker-compose.yml` that bundles Ollama. This is the recommended way for new team members to get started.
+
+**Benefits:**
+- **Zero Configuration**: No need to install Ollama on the host machine.
+- **Auto-Setup**: The container automatically pulls the required model (Mistral/Llama) on first boot.
+- **CI/CD Ready**: Images are automatically built and pushed to GitHub Container Registry (GHCR).
+
+**Usage for New Developers:**
+1. Clone the repo.
+2. Run `scripts/install_and_run.bat`.
+3. Everything (DB, AI Model, Backend) starts automatically.
+
+**How it works:**
+The `llm` service uses a custom `Dockerfile` that includes an `entrypoint.sh` script. This script starts the Ollama server and runs `ollama pull` if the model is missing from the persistent volume.
+
+---
+
 ## Option 4: Mock LLM (For Testing)
 
 Create a mock LLM for CI/CD and unit tests:

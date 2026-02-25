@@ -1,8 +1,7 @@
 // ─── DRAVIS Enterprise - API Client ─────────────────
 // All requests go through the Nginx Gateway.
-// In Docker: same origin (/).  In dev: configurable via env.
-
-const API_BASE = import.meta.env.VITE_API_BASE || "";
+// In Docker: same origin (/). In Desktop: localhost:8080
+const API_BASE = import.meta.env.VITE_API_BASE || "http://127.0.0.1:8080";
 
 // ─── Chat Service (/api/chat/) ──────────────────────
 

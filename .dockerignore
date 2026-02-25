@@ -1,33 +1,47 @@
-# Dependencies & build artifacts
-node_modules/
+# ─── Python ────────────────────────────────────────
 __pycache__/
 *.pyc
+*.pyo
+*.pyd
 .venv/
 venv/
 *.egg-info/
+*.egg
 
-# IDE & OS
+# ─── Node / Frontend ────────────────────────────────
+**/node_modules/
+frontend/.cache/
+frontend/dist/
+
+# ─── IDE & OS ───────────────────────────────────────
 .git/
+.gitignore
 .vscode/
 .idea/
 *.swp
+*.swo
 Thumbs.db
 .DS_Store
 
-# Large files
+# ─── Large / generated files ────────────────────────
 *.gguf
+*.bin
 *.zip
+*.tar.gz
 projecttree.txt
 backendutree.txt
 frontendutree.txt
 
-# Logs
+# ─── Logs & local data ──────────────────────────────
 *.log
 dravis_data/
-
-# Old monolith (kept for reference, not needed in Docker)
-backend/venv/
-backend/__pycache__/
-frontend/node_modules/
-frontend_backup/
 chroma_db/
+dravis_llm_files.zip
+
+# ─── Old monolith (not needed in Docker) ─────────────
+backend/
+frontend_backup/
+
+# ─── Dev/test scripts (not needed in Docker) ────────
+*.bat
+*.ps1
