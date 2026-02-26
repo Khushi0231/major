@@ -1,7 +1,26 @@
 import React, { useEffect, useRef, useState } from "react";
-import ReactMarkdown from "react-markdown";
 import { sendMessage, exportChatHistory, uploadFile } from "../utils/api";
 import './ChatPanel.css';
+
+// Simple markdown renderer — no external deps
+function SimpleMarkdown({ text }: { text: string }) {
+  const html = text
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+    .replace(/```([\s\S]*?)```/g, '<pre><code>$1</code></pre>')
+    .replace(/`([^`]+)`/g, '<code>$1</code>')
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.+?)\*/g, '<em>$1</em>')
+    .replace(/^### (.+)$/gm, '<h3>$1</h3>')
+    .replace(/^## (.+)$/gm, '<h2>$1</h2>')
+    .replace(/^# (.+)$/gm, '<h1>$1</h1>')
+    .replace(/^[-*] (.+)$/gm, '<li>$1</li>')
+    .replace(/^\d+\. (.+)$/gm, '<li>$1</li>')
+    .replace(/(<li>.*<\/li>)/gs, '<ul>$1</ul>')
+    .replace(/<\/ul>\s*<ul>/g, '')
+    .replace(/\n\n/g, '<br/><br/>')
+    .replace(/\n/g, '<br/>');
+  return <div className="message-md" dangerouslySetInnerHTML={{ __html: html }} />;
+}
 
 const STORAGE_KEY = "dravis_chat_threads";
 
@@ -165,7 +184,7 @@ export default function ChatPanel({ setStatus, sessionId, onFirstMessage }: Chat
             {m.sender === "ai" && <div className="message-avatar">D</div>}
             <div className="message-bubble">
               {m.sender === "ai" ? (
-                <ReactMarkdown className="message-md">{m.text}</ReactMarkdown>
+                <SimpleMarkdown text={m.text} />
               ) : (
                 <div className="message-text">{m.text}</div>
               )}

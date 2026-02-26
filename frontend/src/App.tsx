@@ -54,7 +54,7 @@ function App() {
 
   const checkBackendHealth = async () => {
     try {
-      const apiBase = import.meta.env.VITE_API_BASE || '';
+      const apiBase = import.meta.env.VITE_API_BASE || 'http://127.0.0.1:8080';
       const response = await fetch(`${apiBase}/api/health`);
       if (response.ok) {
         setStatus('online');

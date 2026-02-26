@@ -76,36 +76,7 @@ def chat(req: ChatRequest, db: Session = Depends(get_db)):
     logger.info(f"Language: {lang} ({confidence:.2f})")
 
     # Gather RAG context from Document Service
-    context_parts: list[str] = []
-    if req.use_documents:
-        try:
-            resp = httpx.post(
-                f"{settings.DOCUMENT_SERVICE_URL}/query",
-                json={"query": prompt, "top_k": 3},
-                timeout=15,
-            )
-            if resp.status_code == 200:
-                results = resp.json().get("results", [])
-                if results:
-                    context_text = "\n\n".join(r["text"] for r in results[:3])
-                    context_parts.append(f"Relevant context:\n{context_text}")
-        except Exception as e:
-            logger.warning(f"Document service unreachable: {e}")
-
-    # ── Build prompt ──────────────────────────────
-    parts: list[str] = []
-
-    # Mode instruction (prepended as context)
-    mode_instruction = MODE_PROMPTS.get(req.mode, "")
-    if mode_instruction:
-        parts.append(f"[Instruction: {mode_instruction}]")
-
-    # Language hint
-    if lang in ("hi", "hinglish") and confidence > 0.4:
-        lang_label = "Hindi" if lang == "hi" else "Hinglish (Hindi-English mix)"
-        parts.append(f"[Language: Respond in {lang_label}]")
-
-    # RAG context from documents
+    rag_context = ""
     if req.use_documents:
         try:
             resp = httpx.post(
@@ -116,18 +87,39 @@ def chat(req: ChatRequest, db: Session = Depends(get_db)):
             if resp.status_code == 200:
                 results = resp.json().get("results", [])
                 if results:
-                    context_text = "\n\n".join(
+                    rag_context = "\n\n".join(
                         f"[Source {i+1}]: {r['text']}"
                         for i, r in enumerate(results[:4])
-                    )
-                    parts.append(
-                        f"--- Document Context ---\n{context_text}\n--- End Context ---"
                     )
         except Exception as e:
             logger.warning(f"Document service unreachable: {e}")
 
+    # ── Build prompt ──────────────────────────────
+    parts: list[str] = []
+
+    # Mode instruction
+    mode_instruction = MODE_PROMPTS.get(req.mode, "")
+    if mode_instruction:
+        parts.append(f"[Instruction: {mode_instruction}]")
+
+    # Language hint
+    if lang in ("hi", "hinglish") and confidence > 0.4:
+        lang_label = "Hindi" if lang == "hi" else "Hinglish (Hindi-English mix)"
+        parts.append(f"[Language: Respond in {lang_label}]")
+
+    # RAG context — with strong grounding instruction
+    if rag_context:
+        parts.append(
+            "IMPORTANT: The user has uploaded documents. "
+            "Answer the question ONLY based on the document content below. "
+            "Do NOT answer from your general knowledge. "
+            "Do NOT talk about yourself or DRAVIS. "
+            "Quote or reference specific parts of the documents.\n\n"
+            f"--- USER'S DOCUMENT CONTENT ---\n{rag_context}\n--- END OF DOCUMENT CONTENT ---"
+        )
+
     # User question (always last)
-    parts.append(f"Question: {prompt}")
+    parts.append(f"User Question: {prompt}")
 
     full_prompt = "\n\n".join(parts)
 
