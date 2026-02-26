@@ -48,8 +48,20 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Install Python dependencies
-        run: pip install -r services/desktop_requirements.txt
+      - name: Install Python dependencies (stage 1 - PyTorch CPU)
+        run: pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
+
+      - name: Install Python dependencies (stage 2 - ML packages)
+        run: pip install sentence-transformers chromadb
+
+      - name: Install Python dependencies (stage 3 - app deps)
+        run: |
+          pip install fastapi uvicorn[standard] pydantic httpx requests
+          pip install sqlalchemy aiosqlite cryptography
+          pip install openai langchain-core langchain-ollama
+          pip install langdetect python-multipart
+          pip install PyMuPDF python-docx python-pptx Pillow pytesseract
+          pip install pyinstaller
 
       - name: Bundle backend with PyInstaller
         working-directory: services
