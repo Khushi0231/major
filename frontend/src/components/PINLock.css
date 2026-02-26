@@ -140,3 +140,10 @@
     transform: rotate(360deg);
   }
 }
+
+.pin-hint {
+  margin-top: 16px;
+  font-size: 11px;
+  color: var(--text-muted);
+  opacity: 0.6;
+}

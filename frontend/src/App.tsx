@@ -18,8 +18,8 @@ interface Session {
 type ActiveTab = 'chat' | 'docs' | 'quiz' | 'settings';
 
 function App() {
-  // Start locked if PIN exists
-  const [isLocked, setIsLocked] = useState(() => !!localStorage.getItem('dravis_pin'));
+  // Always start locked — PINLock handles both set & verify
+  const [isLocked, setIsLocked] = useState(true);
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
   const [status, setStatus] = useState<'online' | 'offline'>('offline');
   const [activeTab, setActiveTab] = useState<ActiveTab>('chat');

@@ -1,99 +1,99 @@
 import React, { useState, useEffect, useRef } from "react";
-import { verifyPIN, checkPINExists } from "../utils/api";
 import './PINLock.css';
 
-export default function PINLock({ onUnlock }: { onUnlock: () => void }) {
+interface PINLockProps {
+  onUnlock: () => void;
+}
+
+export default function PINLock({ onUnlock }: PINLockProps) {
+  const [mode, setMode] = useState<"loading" | "set" | "verify">("loading");
   const [pin, setPin] = useState(["", "", "", ""]);
+  const [confirmPin, setConfirmPin] = useState(["", "", "", ""]);
+  const [step, setStep] = useState<"enter" | "confirm">("enter");
   const [error, setError] = useState("");
-  const [checking, setChecking] = useState(true);
   const [shaking, setShaking] = useState(false);
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
   useEffect(() => {
-    checkPinStatus();
+    const savedPin = localStorage.getItem("dravis_pin");
+    setMode(savedPin ? "verify" : "set");
   }, []);
 
-  const checkPinStatus = async () => {
-    // Check localStorage first (faster)
-    const localPin = localStorage.getItem("dravis_pin");
-    if (localPin) {
-      setChecking(false);
-      return;
-    }
-    try {
-      const result = await checkPINExists();
-      if (!result.exists) {
-        onUnlock(); // No PIN set
-      } else {
-        setChecking(false);
-      }
-    } catch {
-      // Backend not available, check localStorage
-      if (!localPin) onUnlock();
-      else setChecking(false);
-    }
+  const focusInput = (idx: number) => {
+    setTimeout(() => inputRefs.current[idx]?.focus(), 50);
   };
 
-  const handleDigit = (index: number, value: string) => {
+  const handleDigit = (index: number, value: string, target: "pin" | "confirm") => {
     const digit = value.replace(/\D/g, "").slice(-1);
-    const newPin = [...pin];
-    newPin[index] = digit;
-    setPin(newPin);
+    const setter = target === "pin" ? setPin : setConfirmPin;
+    const current = target === "pin" ? [...pin] : [...confirmPin];
+    current[index] = digit;
+    setter(current);
     setError("");
 
     if (digit && index < 3) {
-      inputRefs.current[index + 1]?.focus();
+      focusInput(index + 1);
     }
 
-    // Auto-submit when all 4 digits entered
+    // Auto-submit on last digit
     if (digit && index === 3) {
-      const fullPin = newPin.join("");
+      const fullPin = current.join("");
       if (fullPin.length === 4) {
-        verifyEnteredPIN(fullPin);
+        if (mode === "verify") {
+          verifyPin(fullPin);
+        } else if (step === "enter") {
+          // Move to confirm step
+          setTimeout(() => {
+            setStep("confirm");
+            setConfirmPin(["", "", "", ""]);
+            focusInput(0);
+          }, 200);
+        } else {
+          // Confirm step — check match
+          const originalPin = pin.join("");
+          if (fullPin === originalPin) {
+            localStorage.setItem("dravis_pin", btoa(fullPin));
+            onUnlock();
+          } else {
+            triggerError("PINs don't match — try again");
+            setStep("enter");
+            setPin(["", "", "", ""]);
+            setConfirmPin(["", "", "", ""]);
+            focusInput(0);
+          }
+        }
       }
     }
   };
 
   const handleKeyDown = (index: number, e: React.KeyboardEvent) => {
-    if (e.key === "Backspace" && !pin[index] && index > 0) {
-      inputRefs.current[index - 1]?.focus();
+    if (e.key === "Backspace" && index > 0) {
+      const target = mode === "set" && step === "confirm" ? "confirm" : "pin";
+      const current = target === "pin" ? [...pin] : [...confirmPin];
+      if (!current[index]) {
+        focusInput(index - 1);
+      }
     }
   };
 
-  const verifyEnteredPIN = async (enteredPin: string) => {
-    // Check localStorage first
-    const localPin = localStorage.getItem("dravis_pin");
-    if (localPin) {
-      if (btoa(enteredPin) === localPin) {
-        onUnlock();
-        return;
-      } else {
-        triggerError();
-        return;
-      }
-    }
-
-    try {
-      const result = await verifyPIN(enteredPin);
-      if (result.verified) {
-        onUnlock();
-      } else {
-        triggerError();
-      }
-    } catch {
-      triggerError();
+  const verifyPin = (entered: string) => {
+    const saved = localStorage.getItem("dravis_pin");
+    if (saved && btoa(entered) === saved) {
+      onUnlock();
+    } else {
+      triggerError("Wrong PIN");
+      setPin(["", "", "", ""]);
+      focusInput(0);
     }
   };
 
-  const triggerError = () => {
-    setError("Incorrect PIN");
+  const triggerError = (msg: string) => {
+    setError(msg);
     setShaking(true);
-    setPin(["", "", "", ""]);
-    inputRefs.current[0]?.focus();
     setTimeout(() => setShaking(false), 500);
   };
 
-  if (checking) {
+  if (mode === "loading") {
     return (
       <div className="pin-screen">
         <div className="pin-loading-spinner" />
@@ -101,23 +101,33 @@ export default function PINLock({ onUnlock }: { onUnlock: () => void }) {
     );
   }
 
+  const isConfirmStep = mode === "set" && step === "confirm";
+  const currentPin = isConfirmStep ? confirmPin : pin;
+
   return (
     <div className="pin-screen">
       <div className="pin-card">
         <div className="pin-logo">D</div>
         <h1 className="pin-title">DRAVIS</h1>
-        <p className="pin-subtitle">Enter your 4-digit PIN to unlock</p>
+        <p className="pin-subtitle">
+          {mode === "set"
+            ? step === "enter"
+              ? "Create a 4-digit PIN to secure your sessions"
+              : "Re-enter PIN to confirm"
+            : "Enter your PIN to unlock"
+          }
+        </p>
 
         <div className={`pin-inputs ${shaking ? "shake" : ""}`}>
-          {pin.map((digit, i) => (
+          {[0, 1, 2, 3].map((i) => (
             <input
-              key={i}
+              key={`${step}-${i}`}
               ref={(el) => { inputRefs.current[i] = el; }}
               type="password"
               inputMode="numeric"
               maxLength={1}
-              value={digit}
-              onChange={(e) => handleDigit(i, e.target.value)}
+              value={currentPin[i]}
+              onChange={(e) => handleDigit(i, e.target.value, isConfirmStep ? "confirm" : "pin")}
               onKeyDown={(e) => handleKeyDown(i, e)}
               className="pin-digit"
               autoFocus={i === 0}
@@ -128,10 +138,14 @@ export default function PINLock({ onUnlock }: { onUnlock: () => void }) {
         {error && <div className="pin-error">{error}</div>}
 
         <div className="pin-dots">
-          {pin.map((d, i) => (
+          {currentPin.map((d, i) => (
             <span key={i} className={`pin-dot ${d ? "filled" : ""}`} />
           ))}
         </div>
+
+        {mode === "set" && step === "enter" && (
+          <p className="pin-hint">This PIN protects your chat history</p>
+        )}
       </div>
     </div>
   );
