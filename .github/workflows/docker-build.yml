@@ -7,8 +7,8 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  BACKEND_IMAGE: ghcr.io/${{ github.repository_owner }}/dravis-backend
-  FRONTEND_IMAGE: ghcr.io/${{ github.repository_owner }}/dravis-frontend
+  BACKEND_IMAGE: ghcr.io/khushi0231/dravis-backend
+  FRONTEND_IMAGE: ghcr.io/khushi0231/dravis-frontend
 
 jobs:
   build-and-push:
