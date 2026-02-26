@@ -102,12 +102,7 @@ def chat(req: ChatRequest, db: Session = Depends(get_db)):
     if mode_instruction:
         parts.append(f"[Instruction: {mode_instruction}]")
 
-    # Language hint — only inject for ACTUAL Hindi (Devanagari), not short English messages
-    word_count = len(prompt.split())
-    if lang == "hi" and confidence > 0.7 and word_count >= 3:
-        parts.append("[Language: Respond in Hindi]")
-    elif lang == "hinglish" and confidence > 0.7 and word_count >= 4:
-        parts.append("[Language: Respond in Hinglish (Hindi-English mix)]")
+    # Language hint removed — system prompt enforces English by default
 
     # RAG context — with strong grounding instruction
     if rag_context:
