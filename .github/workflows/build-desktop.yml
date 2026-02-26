@@ -1,0 +1,151 @@
+# ─── DRAVIS Desktop App — Build & Release ──────────────────────────
+# Builds:
+#   1. Python backend → PyInstaller → dravis-bridge binary
+#   2. React frontend + Tauri → .exe (Windows), .dmg (macOS)
+# Publishes installers to GitHub Releases.
+
+name: Build Desktop App
+
+on:
+  push:
+    tags:
+      - 'v*'
+    branches: [main, fix/containerised-setup]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version (e.g. 1.0.0)'
+        required: true
+        default: '1.0.0'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            target: windows
+            sidecar-ext: .exe
+            rust-target: x86_64-pc-windows-msvc
+          - os: macos-latest
+            target: macos
+            sidecar-ext: ''
+            rust-target: x86_64-apple-darwin
+
+    runs-on: ${{ matrix.os }}
+    name: Build (${{ matrix.target }})
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # ── Python backend ──────────────────────
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Python dependencies
+        run: pip install -r services/desktop_requirements.txt
+
+      - name: Bundle backend with PyInstaller
+        working-directory: services
+        shell: bash
+        run: |
+          pyinstaller --onefile \
+            --name dravis-bridge \
+            --hidden-import auth.app.main \
+            --hidden-import auth.app.routes \
+            --hidden-import auth.app.database \
+            --hidden-import chat.app.main \
+            --hidden-import chat.app.routes \
+            --hidden-import chat.app.config \
+            --hidden-import chat.app.database \
+            --hidden-import chat.app.language_detector \
+            --hidden-import chat.app.llm.manager \
+            --hidden-import chat.app.llm.providers.base \
+            --hidden-import chat.app.llm.providers.langchain_ollama_provider \
+            --hidden-import chat.app.llm.providers.ollama_provider \
+            --hidden-import chat.app.llm.providers.openai_provider \
+            --hidden-import document.app.main \
+            --hidden-import document.app.routes \
+            --hidden-import document.app.config \
+            --hidden-import document.app.database \
+            --hidden-import document.app.embeddings \
+            --hidden-import document.app.parser \
+            --hidden-import quiz.app.main \
+            --hidden-import quiz.app.routes \
+            --hidden-import quiz.app.config \
+            --hidden-import quiz.app.schemas \
+            --hidden-import langchain_ollama \
+            --hidden-import langchain_core \
+            --hidden-import sentence_transformers \
+            --hidden-import chromadb \
+            --hidden-import uvicorn \
+            --hidden-import httpx \
+            --hidden-import sqlalchemy \
+            --hidden-import pymysql \
+            --hidden-import fitz \
+            --hidden-import docx \
+            --hidden-import pptx \
+            --collect-all langchain_ollama \
+            --collect-all sentence_transformers \
+            --collect-all chromadb \
+            desktop_bridge.py
+
+      - name: Copy sidecar to Tauri
+        shell: bash
+        run: |
+          mkdir -p frontend/src-tauri/sidecars
+          if [ "${{ matrix.target }}" = "windows" ]; then
+            cp services/dist/dravis-bridge.exe frontend/src-tauri/sidecars/dravis-bridge-x86_64-pc-windows-msvc.exe
+          else
+            cp services/dist/dravis-bridge frontend/src-tauri/sidecars/dravis-bridge-x86_64-apple-darwin
+            chmod +x frontend/src-tauri/sidecars/dravis-bridge-x86_64-apple-darwin
+          fi
+
+      # ── Frontend + Tauri ────────────────────
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.rust-target }}
+
+      - name: Install system deps (macOS)
+        if: matrix.target == 'macos'
+        run: |
+          rustup target add x86_64-apple-darwin
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Build Tauri app
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          projectPath: frontend
+          tauriScript: npx tauri
+          tagName: ${{ github.ref_name || format('v{0}', github.event.inputs.version) }}
+          releaseName: 'DRAVIS ${{ github.ref_name || github.event.inputs.version }}'
+          releaseBody: |
+            ## DRAVIS Desktop App
+
+            Download the installer for your platform:
+            - **Windows**: `.exe` installer
+            - **macOS**: `.dmg` disk image
+
+            ### First Launch
+            1. Install [Ollama](https://ollama.com) if you haven't already
+            2. Open DRAVIS — it will automatically download the AI model (~5 GB) on first run
+            3. After that, DRAVIS works fully offline!
+          releaseDraft: false
+          prerelease: false

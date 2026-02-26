@@ -1,37 +1,47 @@
-# ── Python ────────────────────────────────
+# ─── Python ────────────────────────────────────────
 __pycache__/
 *.pyc
 *.pyo
 *.pyd
-.Python
-*.egg-info/
 .venv/
 venv/
-env/
+*.egg-info/
+*.egg
 
-# ── Node ──────────────────────────────────
-frontend/node_modules/
+# ─── Node / Frontend ────────────────────────────────
+**/node_modules/
+frontend/.cache/
 frontend/dist/
-frontend/.env.local
 
-# ── Data / Runtime ────────────────────────
-dravis_data/
-chroma_db/
-*.db
-*.log
-backend.log
+# ─── IDE & OS ───────────────────────────────────────
+.git/
+.gitignore
+.vscode/
+.idea/
+*.swp
+*.swo
+Thumbs.db
+.DS_Store
 
-# ── Model files (managed by Ollama) ───────
+# ─── Large / generated files ────────────────────────
 *.gguf
 *.bin
-*.safetensors
+*.zip
+*.tar.gz
+projecttree.txt
+backendutree.txt
+frontendutree.txt
 
-# ── Dev tools ─────────────────────────────
-.env
-.DS_Store
-*.swp
-.idea/
-.vscode/
+# ─── Logs & local data ──────────────────────────────
+*.log
+dravis_data/
+chroma_db/
+dravis_llm_files.zip
 
-# ── Git ───────────────────────────────────
-.git/
+# ─── Old monolith (not needed in Docker) ─────────────
+backend/
+frontend_backup/
+
+# ─── Dev/test scripts (not needed in Docker) ────────
+*.bat
+*.ps1

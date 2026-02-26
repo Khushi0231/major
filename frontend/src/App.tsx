@@ -18,7 +18,8 @@ interface Session {
 type ActiveTab = 'chat' | 'docs' | 'quiz' | 'settings';
 
 function App() {
-  const [isLocked, setIsLocked] = useState(false);
+  // Always start locked — PINLock handles both set & verify
+  const [isLocked, setIsLocked] = useState(true);
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
   const [status, setStatus] = useState<'online' | 'offline'>('offline');
   const [activeTab, setActiveTab] = useState<ActiveTab>('chat');
@@ -53,11 +54,9 @@ function App() {
   }, []);
 
   const checkBackendHealth = async () => {
-    // In Docker: /health-check (nginx proxies to backend)
-    // Locally: http://localhost:8000/
-    const healthUrl = import.meta.env.VITE_HEALTH_URL ?? "http://localhost:8000/";
     try {
-      const response = await fetch(healthUrl);
+      const apiBase = import.meta.env.VITE_API_BASE || 'http://127.0.0.1:8080';
+      const response = await fetch(`${apiBase}/api/health`);
       if (response.ok) {
         setStatus('online');
       } else {
@@ -179,7 +178,7 @@ function App() {
               <SettingsPanel
                 theme={theme}
                 setTheme={setTheme}
-                onLockApp={() => { }}
+                onLockApp={() => setIsLocked(true)}
               />
             )}
           </div>

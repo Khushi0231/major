@@ -1,48 +1,91 @@
 #!/bin/bash
-# ============================================================
-# DRAVIS — Linux Installer
-# curl -fsSL https://raw.githubusercontent.com/Khushi0231/major/main/installers/install-dravis-linux.sh | bash
-# ============================================================
+# ================================================================
+#  DRAVIS Installer for Linux
+#  Run: curl -fsSL https://raw.githubusercontent.com/Khushi0231/major/main/installers/install-dravis-linux.sh | bash
+#  Or:  bash install-dravis-linux.sh
+# ================================================================
+
 set -e
 
-G='\033[0;32m'; B='\033[0;34m'; Y='\033[0;33m'; R='\033[0;31m'; NC='\033[0m'
-DRAVIS_DIR="$HOME/DRAVIS"
-COMPOSE_URL="https://raw.githubusercontent.com/Khushi0231/major/main/docker-compose.prod.yml"
-
-echo -e "${B}  DRAVIS — AI Study Assistant Installer${NC}"
+echo ""
+echo "  ========================================"
+echo "       DRAVIS — AI Study Assistant"
+echo "       One-click offline installer"
+echo "  ========================================"
 echo ""
 
-# Docker
-if ! command -v docker &>/dev/null; then
-    echo -e "${Y}  Installing Docker...${NC}"
+# ─── Check Docker ────────────────────────────────
+echo "[1/4] Checking Docker..."
+if ! command -v docker &> /dev/null; then
+    echo "  Docker not found. Installing..."
     curl -fsSL https://get.docker.com | sh
     sudo usermod -aG docker "$USER"
-fi
-if ! docker info &>/dev/null 2>&1; then
-    sudo systemctl start docker 2>/dev/null || sudo service docker start 2>/dev/null
-fi
-echo -e "${G}  ✓ Docker ready${NC}"
-
-# Compose
-if ! docker compose version &>/dev/null && ! docker-compose version &>/dev/null; then
-    sudo apt-get install -y docker-compose-plugin 2>/dev/null || true
+    echo ""
+    echo "  Docker installed! Please log out and log back in, then re-run this script."
+    exit 0
 fi
 
-# Download & start
-mkdir -p "$DRAVIS_DIR"
-curl -fsSL "$COMPOSE_URL" -o "$DRAVIS_DIR/docker-compose.yml"
-cd "$DRAVIS_DIR"
+if ! docker info &> /dev/null; then
+    echo "  Docker is installed but the daemon isn't running."
+    echo "  Try: sudo systemctl start docker"
+    echo "  Then re-run this script."
+    exit 1
+fi
+echo "  [OK] Docker is running."
 
-echo -e "${B}  Pulling images...${NC}"
-docker compose pull 2>/dev/null || sudo docker compose pull
+# ─── Check docker compose ────────────────────────
+echo "[2/4] Checking docker compose..."
+if ! docker compose version &> /dev/null; then
+    echo "  docker compose plugin not found. Installing..."
+    sudo apt-get update -qq && sudo apt-get install -y -qq docker-compose-plugin 2>/dev/null \
+      || sudo dnf install -y docker-compose-plugin 2>/dev/null \
+      || { echo "Please install docker compose manually."; exit 1; }
+fi
+echo "  [OK] docker compose found."
 
-echo -e "${B}  Starting DRAVIS...${NC}"
-docker compose up -d 2>/dev/null || sudo docker compose up -d
+# ─── Check Git ───────────────────────────────────
+echo "[3/4] Checking Git..."
+if ! command -v git &> /dev/null; then
+    sudo apt-get install -y git 2>/dev/null \
+      || sudo dnf install -y git 2>/dev/null \
+      || sudo pacman -S --noconfirm git 2>/dev/null
+fi
+echo "  [OK] Git found."
+
+# ─── Clone DRAVIS ────────────────────────────────
+echo "[4/4] Setting up DRAVIS..."
+INSTALL_DIR="$HOME/DRAVIS"
+
+if [ -f "$INSTALL_DIR/docker-compose.yml" ]; then
+    echo "  DRAVIS already installed. Updating..."
+    cd "$INSTALL_DIR"
+    git pull origin main 2>/dev/null || true
+else
+    echo "  Downloading DRAVIS..."
+    git clone --depth 1 https://github.com/Khushi0231/major.git "$INSTALL_DIR"
+    cd "$INSTALL_DIR"
+fi
+
+# ─── Start DRAVIS ────────────────────────────────
+echo ""
+echo "  Starting DRAVIS..."
+echo "  First launch downloads the Mistral 7B AI model (~4.5 GB)."
+echo "  This is a one-time download. Please be patient!"
+echo ""
+
+docker compose up --build -d
 
 echo ""
-echo -e "${G}  ✅ DRAVIS installed! Open: http://localhost${NC}"
-echo "  First run downloads AI model (~4.5 GB, 5-15 min)."
-echo "  Stop:  cd ~/DRAVIS && docker compose down"
-echo "  Start: cd ~/DRAVIS && docker compose up -d"
+echo "  Waiting for services..."
+sleep 20
 
-xdg-open http://localhost 2>/dev/null || true
+echo ""
+echo "  ========================================"
+echo "   DRAVIS is starting!"
+echo ""
+echo "   Open:  http://localhost:8080"
+echo "   Stop:  cd ~/DRAVIS && docker compose down"
+echo "  ========================================"
+echo ""
+
+xdg-open http://localhost:8080 2>/dev/null || echo "  Open http://localhost:8080 in your browser"

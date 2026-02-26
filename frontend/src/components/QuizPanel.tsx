@@ -18,167 +18,140 @@ export default function QuizPanel() {
   const [questions, setQuestions] = useState<QuizQuestion[]>([]);
   const [loading, setLoading] = useState(false);
   const [selectedAnswers, setSelectedAnswers] = useState<{ [key: number]: string }>({});
+  const [revealed, setRevealed] = useState<{ [key: number]: boolean }>({});
 
   async function handleGenerate() {
     if (!topic.trim()) return;
-
     setLoading(true);
     setQuestions([]);
     setSelectedAnswers({});
-
+    setRevealed({});
     try {
-      const result = await generateQuiz(
-        topic,
-        difficulty,
-        quizType,
-        useDocuments
-      );
-
-      if (result?.questions?.length > 0) {
-        setQuestions(result.questions);
-      } else {
-        setQuestions([]);
-      }
-    } catch (error) {
-      console.error("Quiz generation error:", error);
+      const result = await generateQuiz(topic, difficulty, quizType, useDocuments);
+      if (result?.questions?.length > 0) setQuestions(result.questions);
+    } catch (err) {
+      console.error("Quiz generation error:", err);
     } finally {
       setLoading(false);
     }
   }
 
+  const score = questions.length > 0
+    ? questions.filter((q, i) => selectedAnswers[i] === q.correct_answer).length
+    : 0;
+
   return (
     <div className="quiz-panel">
-      {/* Generator Form */}
+      {/* Generator */}
       <div className="quiz-header">
         <div className="quiz-title">Generate Quiz</div>
-        <div className="quiz-controls">
+        <div className="quiz-form">
           <input
-            placeholder="Enter topic..."
+            className="quiz-input"
+            placeholder="Enter a topic (e.g. Photosynthesis, World War II)..."
             value={topic}
             onChange={(e) => setTopic(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && handleGenerate()}
-            className="quiz-input"
           />
-          <select
-            value={difficulty}
-            onChange={(e) => setDifficulty(e.target.value as any)}
-            className="quiz-input"
-            style={{ flex: 'none', width: 'auto' }}
-          >
-            <option value="easy">Easy</option>
-            <option value="medium">Medium</option>
-            <option value="hard">Hard</option>
-          </select>
-          <select
-            value={quizType}
-            onChange={(e) => setQuizType(e.target.value as any)}
-            className="quiz-input"
-            style={{ flex: 'none', width: 'auto' }}
-          >
-            <option value="simple">Simple</option>
-            <option value="advanced">Advanced</option>
-          </select>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginTop: '12px' }}>
-          <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', cursor: 'pointer', color: 'var(--text-secondary)' }}>
-            <input
-              type="checkbox"
-              checked={useDocuments}
-              onChange={(e) => setUseDocuments(e.target.checked)}
-            />
-            Use documents
-          </label>
-          <button
-            onClick={handleGenerate}
-            disabled={loading || !topic.trim()}
-            className="generate-btn"
-          >
-            {loading ? (
-              <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span className="loading-spinner"></span>
-                Generating...
-              </span>
-            ) : "Generate Quiz"}
+          <div className="quiz-options-row">
+            <select className="quiz-select" value={difficulty} onChange={(e) => setDifficulty(e.target.value as any)}>
+              <option value="easy">Easy</option>
+              <option value="medium">Medium</option>
+              <option value="hard">Hard</option>
+            </select>
+            <select className="quiz-select" value={quizType} onChange={(e) => setQuizType(e.target.value as any)}>
+              <option value="simple">MCQ</option>
+              <option value="advanced">Short Answer</option>
+            </select>
+            <label className="quiz-doc-toggle">
+              <input type="checkbox" checked={useDocuments} onChange={(e) => setUseDocuments(e.target.checked)} />
+              From docs
+            </label>
+          </div>
+          <button className="quiz-generate-btn" onClick={handleGenerate} disabled={loading || !topic.trim()}>
+            {loading ? "Generating..." : "Generate"}
           </button>
         </div>
       </div>
 
       {/* Questions */}
       <div className="quiz-content">
-        {questions.length === 0 && !loading ? (
-          <div className="quiz-empty">
-            <div className="empty-icon">📝</div>
-            <p>Enter a topic and generate a quiz</p>
+        {loading && (
+          <div className="quiz-loading">
+            <div className="loading-spinner" />
+            <span>Generating questions with AI...</span>
           </div>
-        ) : (
-          <div className="quiz-questions">
-            {questions.map((q, idx) => (
-              <div key={idx} className="question-card">
-                <div className="question-text">
-                  <span style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    width: '28px',
-                    height: '28px',
-                    borderRadius: '50%',
-                    background: 'var(--accent)',
-                    color: 'white',
-                    fontWeight: 'bold',
-                    fontSize: '12px',
-                    marginRight: '10px',
-                    flexShrink: 0
-                  }}>
-                    {idx + 1}
-                  </span>
-                  {q.question}
-                </div>
-                {q.type === "mcq" || q.type === "true_false" ? (
-                  <div className="question-options">
-                    {q.options?.map((option, optIdx) => (
-                      <div
-                        key={optIdx}
-                        className={`option ${selectedAnswers[idx] === option ? "selected" : ""}`}
-                        onClick={() => setSelectedAnswers(prev => ({ ...prev, [idx]: option }))}
-                      >
-                        <input
-                          type="radio"
-                          name={`q-${idx}`}
-                          value={option}
-                          checked={selectedAnswers[idx] === option}
-                          onChange={() => setSelectedAnswers(prev => ({ ...prev, [idx]: option }))}
-                          style={{ marginRight: '10px' }}
-                        />
-                        {option}
+        )}
+
+        {questions.length > 0 && (
+          <>
+            <div className="quiz-score-bar">
+              <span>Score: {score}/{questions.length}</span>
+              <span>{Math.round((score / questions.length) * 100)}%</span>
+            </div>
+
+            <div className="quiz-questions">
+              {questions.map((q, idx) => (
+                <div key={idx} className="q-card">
+                  <div className="q-number">{idx + 1}</div>
+                  <div className="q-body">
+                    <div className="q-text">{q.question}</div>
+
+                    {(q.type === "mcq" || q.type === "true_false") && q.options ? (
+                      <div className="q-options">
+                        {q.options.map((opt, optIdx) => {
+                          const selected = selectedAnswers[idx] === opt;
+                          const isRevealed = revealed[idx];
+                          const isCorrect = opt === q.correct_answer;
+                          let cls = "q-option";
+                          if (selected) cls += " selected";
+                          if (isRevealed && isCorrect) cls += " correct";
+                          if (isRevealed && selected && !isCorrect) cls += " incorrect";
+
+                          return (
+                            <button
+                              key={optIdx}
+                              className={cls}
+                              onClick={() => {
+                                setSelectedAnswers(p => ({ ...p, [idx]: opt }));
+                                setRevealed(p => ({ ...p, [idx]: true }));
+                              }}
+                              disabled={isRevealed}
+                            >
+                              <span className="q-option-letter">{String.fromCharCode(65 + optIdx)}</span>
+                              {opt}
+                            </button>
+                          );
+                        })}
                       </div>
-                    ))}
+                    ) : (
+                      <textarea
+                        className="q-textarea"
+                        placeholder="Type your answer..."
+                        rows={2}
+                        value={selectedAnswers[idx] || ""}
+                        onChange={(e) => setSelectedAnswers(p => ({ ...p, [idx]: e.target.value }))}
+                      />
+                    )}
+
+                    {revealed[idx] && (
+                      <div className="q-explanation">
+                        <div className="q-answer">Answer: {q.correct_answer}</div>
+                        <div className="q-explain-text">{q.explanation}</div>
+                      </div>
+                    )}
                   </div>
-                ) : (
-                  <textarea
-                    placeholder="Your answer..."
-                    className="quiz-input"
-                    rows={3}
-                    style={{ width: '100%', resize: 'vertical', marginTop: '8px' }}
-                    value={selectedAnswers[idx] || ""}
-                    onChange={(e) => setSelectedAnswers(prev => ({ ...prev, [idx]: e.target.value }))}
-                  />
-                )}
-                {selectedAnswers[idx] && (
-                  <div style={{
-                    marginTop: '12px',
-                    padding: '12px',
-                    background: 'var(--bg-primary)',
-                    borderRadius: '6px',
-                    border: '1px solid var(--border)'
-                  }}>
-                    <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--success)', marginBottom: '4px' }}>
-                      ✓ Answer: {q.correct_answer}
-                    </div>
-                    <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>{q.explanation}</div>
-                  </div>
-                )}
-              </div>
-            ))}
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+
+        {!loading && questions.length === 0 && (
+          <div className="quiz-empty">
+            <div className="quiz-empty-icon">🧠</div>
+            <div>Enter a topic above to generate a quiz</div>
+            <div className="quiz-empty-hint">AI will create questions based on the topic or your uploaded documents</div>
           </div>
         )}
       </div>

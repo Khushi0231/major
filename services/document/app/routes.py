@@ -29,18 +29,29 @@ def _get_collection():
     if _collection is not None:
         return _collection
     try:
-        _chroma_client = chromadb.HttpClient(
-            host=settings.CHROMADB_HOST,
-            port=settings.CHROMADB_PORT,
-        )
+        # Docker mode: connect to ChromaDB server container
+        if settings.CHROMADB_HOST:
+            logger.info(f"Connecting to ChromaDB server at {settings.CHROMADB_HOST}:{settings.CHROMADB_PORT}")
+            _chroma_client = chromadb.HttpClient(
+                host=settings.CHROMADB_HOST,
+                port=settings.CHROMADB_PORT,
+            )
+        # Desktop mode: use local persistence
+        elif settings.CHROMADB_PERSIST_DIR:
+            logger.info(f"Using local ChromaDB persistence at {settings.CHROMADB_PERSIST_DIR}")
+            _chroma_client = chromadb.PersistentClient(path=settings.CHROMADB_PERSIST_DIR)
+        else:
+            logger.error("No ChromaDB configuration found")
+            return None
+
         _collection = _chroma_client.get_or_create_collection(
             name="documents",
             metadata={"description": "DRAVIS document embeddings"},
         )
-        logger.info("Connected to ChromaDB")
+        logger.info("ChromaDB initialized")
         return _collection
     except Exception as e:
-        logger.error(f"ChromaDB connection failed: {e}")
+        logger.error(f"ChromaDB initialization failed: {e}")
         return None
 
 

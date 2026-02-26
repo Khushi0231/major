@@ -40,7 +40,7 @@ class ChatSetting(Base):
     setting_value = Column(Text, nullable=False)
     updated_at    = Column(
         TIMESTAMP,
-        server_default=text("CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP"),
+        server_default=text("CURRENT_TIMESTAMP"),
     )
 
 

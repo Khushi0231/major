@@ -21,10 +21,23 @@ router = APIRouter()
 
 # ─── Initialise LLM Manager at module level ────
 _llm = LLMManager({
+    # PRIMARY: LangChain + Ollama with llama3.1:8b
     "ollama": {
         "base_url": settings.OLLAMA_BASE_URL,
-        "model": settings.OLLAMA_MODEL,
+        "model": settings.OLLAMA_MODEL,   # default: llama3.1:8b
         "timeout": settings.OLLAMA_TIMEOUT,
+        "temperature": 0.6,
+    },
+    # SECONDARY: Mistral via raw Ollama API
+    "mistral": {
+        "base_url": settings.OLLAMA_BASE_URL,
+        "model": "mistral",
+        "timeout": settings.OLLAMA_TIMEOUT,
+    },
+    # CLOUD FALLBACKS
+    "groq": {
+        "api_key": settings.GROQ_API_KEY,
+        "model": settings.GROQ_MODEL,
     },
     "openai": {
         "api_key": settings.OPENAI_API_KEY,
@@ -35,9 +48,18 @@ _llm = LLMManager({
 
 MODE_PROMPTS = {
     "normal": "",
-    "exam_prep": "Provide a concise answer optimised for quick revision.",
-    "practice": "After your answer, generate a practice question.",
-    "vocabulary": "Explain vocabulary clearly with examples.",
+    "exam_prep": (
+        "The user is preparing for an exam. Give a concise, well-structured answer "
+        "using headings and bullet points. Include key definitions, formulas, or steps where relevant."
+    ),
+    "practice": (
+        "First answer the user's question clearly. Then at the end, add a section "
+        "titled 'Practice Question:' with one related question the user can try."
+    ),
+    "vocabulary": (
+        "Focus on vocabulary and language. Define key terms clearly, give example sentences, "
+        "and explain any nuance or common confusion."
+    ),
 }
 
 
@@ -54,31 +76,49 @@ def chat(req: ChatRequest, db: Session = Depends(get_db)):
     logger.info(f"Language: {lang} ({confidence:.2f})")
 
     # Gather RAG context from Document Service
-    context_parts: list[str] = []
+    rag_context = ""
     if req.use_documents:
         try:
             resp = httpx.post(
                 f"{settings.DOCUMENT_SERVICE_URL}/query",
-                json={"query": prompt, "top_k": 3},
+                json={"query": prompt, "top_k": 4},
                 timeout=15,
             )
             if resp.status_code == 200:
                 results = resp.json().get("results", [])
                 if results:
-                    context_text = "\n\n".join(r["text"] for r in results[:3])
-                    context_parts.append(f"Relevant context:\n{context_text}")
+                    rag_context = "\n\n".join(
+                        f"[Source {i+1}]: {r['text']}"
+                        for i, r in enumerate(results[:4])
+                    )
         except Exception as e:
             logger.warning(f"Document service unreachable: {e}")
 
-    # Build prompt
-    full_prompt = prompt
+    # ── Build prompt ──────────────────────────────
+    parts: list[str] = []
+
+    # Mode instruction
     mode_instruction = MODE_PROMPTS.get(req.mode, "")
-    if context_parts:
-        full_prompt = f"{prompt}\n\n{''.join(context_parts)}"
     if mode_instruction:
-        full_prompt = f"{mode_instruction}\n\n{full_prompt}"
-    if lang in ("hi", "hinglish") and confidence > 0.3:
-        full_prompt = f"Respond in {lang.upper()} if appropriate.\n\n{full_prompt}"
+        parts.append(f"[Instruction: {mode_instruction}]")
+
+    # Language hint removed — system prompt enforces English by default
+
+    # RAG context — with strong grounding instruction
+    if rag_context:
+        parts.append(
+            "IMPORTANT: The user has uploaded documents. "
+            "Answer the question ONLY based on the document content below. "
+            "Do NOT answer from your general knowledge. "
+            "Do NOT talk about yourself or DRAVIS. "
+            "Quote or reference specific parts of the documents.\n\n"
+            f"--- USER'S DOCUMENT CONTENT ---\n{rag_context}\n--- END OF DOCUMENT CONTENT ---"
+        )
+
+    # User question (always last)
+    parts.append(f"User Question: {prompt}")
+
+    full_prompt = "\n\n".join(parts)
 
     # Generate
     reply = _llm.generate(full_prompt)
