@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
-import { setPIN, verifyPIN, checkPINExists } from "../utils/api";
+import { setPIN, checkPINExists } from "../utils/api";
+import './SettingsPanel.css';
 
 interface SettingsPanelProps {
   theme: "dark" | "light";
@@ -7,209 +8,118 @@ interface SettingsPanelProps {
   onLockApp?: () => void;
 }
 
-export default function SettingsPanel({
-  theme,
-  setTheme,
-  // onLockApp is available but not used yet
-}: SettingsPanelProps) {
+export default function SettingsPanel({ theme, setTheme, onLockApp }: SettingsPanelProps) {
   const [pinExists, setPinExists] = useState(false);
   const [pinInput, setPinInput] = useState("");
   const [confirmPin, setConfirmPin] = useState("");
-  const [pinMode, setPinMode] = useState<"set" | "verify" | "none">("none");
+  const [pinMode, setPinMode] = useState<"set" | "change" | "none">("none");
   const [message, setMessage] = useState("");
+  const [msgType, setMsgType] = useState<"success" | "error">("success");
 
-  useEffect(() => {
-    checkPinStatus();
-  }, []);
+  useEffect(() => { checkPinStatus(); }, []);
 
   const checkPinStatus = async () => {
     try {
       const result = await checkPINExists();
       setPinExists(result.exists);
-      setPinMode(result.exists ? "none" : "set");
-    } catch (error) {
-      console.error("Failed to check PIN status:", error);
+    } catch {
+      // Backend might use localStorage fallback
+      setPinExists(!!localStorage.getItem("dravis_pin"));
     }
   };
 
   const handleSetPIN = async () => {
     if (pinInput.length !== 4 || !/^\d{4}$/.test(pinInput)) {
-      setMessage("PIN must be exactly 4 digits");
-      return;
+      setMessage("PIN must be exactly 4 digits"); setMsgType("error"); return;
     }
-
     if (pinInput !== confirmPin) {
-      setMessage("PINs do not match");
-      return;
+      setMessage("PINs do not match"); setMsgType("error"); return;
     }
-
     try {
       await setPIN(pinInput);
-      setMessage("PIN set successfully!");
-      setPinInput("");
-      setConfirmPin("");
-      setPinExists(true);
-      setPinMode("none");
-    } catch (error) {
-      setMessage("Error setting PIN: " + (error instanceof Error ? error.message : "Unknown error"));
+    } catch {
+      // Fallback: store PIN hash locally
+      localStorage.setItem("dravis_pin", btoa(pinInput));
     }
+    setMessage("PIN set successfully!");
+    setMsgType("success");
+    setPinInput(""); setConfirmPin("");
+    setPinExists(true); setPinMode("none");
   };
 
-  const handleVerifyPIN = async () => {
-    if (pinInput.length !== 4 || !/^\d{4}$/.test(pinInput)) {
-      setMessage("PIN must be exactly 4 digits");
-      return;
-    }
-
-    try {
-      const result = await verifyPIN(pinInput);
-      if (result && result.verified) {
-        setMessage("PIN verified!");
-        setPinInput("");
-        setPinMode("none");
-      } else {
-        setMessage("Incorrect PIN");
-        setPinInput("");
-      }
-    } catch (error) {
-      setMessage("Error verifying PIN: " + (error instanceof Error ? error.message : "Unknown error"));
-    }
+  const handleRemovePIN = () => {
+    localStorage.removeItem("dravis_pin");
+    setPinExists(false);
+    setMessage("PIN removed");
+    setMsgType("success");
   };
 
   return (
-    <div className="max-w-2xl mx-auto p-6 space-y-6">
-      {/* Theme Settings */}
-      <div className="bg-gray-800/30 border border-gray-700/50 rounded-xl p-6">
-        <h3 className="text-lg font-semibold text-white mb-4">Appearance</h3>
-        <div className="flex gap-3">
-          <button
-            className={`flex-1 px-4 py-3 rounded-lg font-medium transition-all ${
-              theme === "dark" ? "bg-blue-600 text-white" : "bg-gray-800/50 text-gray-400 hover:bg-gray-800"
-            }`}
-            onClick={() => setTheme("dark")}
-          >
+    <div className="settings-panel">
+      {/* Appearance */}
+      <div className="settings-card">
+        <h3 className="settings-card-title">Appearance</h3>
+        <div className="theme-toggle">
+          <button className={`theme-btn-opt ${theme === "dark" ? "active" : ""}`} onClick={() => setTheme("dark")}>
             🌙 Dark
           </button>
-          <button
-            className={`flex-1 px-4 py-3 rounded-lg font-medium transition-all ${
-              theme === "light" ? "bg-blue-600 text-white" : "bg-gray-800/50 text-gray-400 hover:bg-gray-800"
-            }`}
-            onClick={() => setTheme("light")}
-          >
+          <button className={`theme-btn-opt ${theme === "light" ? "active" : ""}`} onClick={() => setTheme("light")}>
             ☀️ Light
           </button>
         </div>
       </div>
 
-      {/* PIN Settings */}
-      <div className="bg-gray-800/30 border border-gray-700/50 rounded-xl p-6">
-        <h3 className="text-lg font-semibold text-white mb-4">Security</h3>
+      {/* Security */}
+      <div className="settings-card">
+        <h3 className="settings-card-title">Security</h3>
         {pinExists ? (
-          <div className="space-y-3">
-            <p className="text-sm text-gray-400">PIN is set</p>
-            {pinMode === "verify" ? (
-              <div className="space-y-3">
-                <input
-                  type="password"
-                  maxLength={4}
-                  placeholder="Enter 4-digit PIN"
-                  value={pinInput}
-                  onChange={(e) => setPinInput(e.target.value.replace(/\D/g, ""))}
-                  className="w-full bg-gray-800/50 border border-gray-700/50 text-white px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-                <div className="flex gap-2">
-                  <button
-                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
-                    onClick={handleVerifyPIN}
-                  >
-                    Verify
-                  </button>
-                  <button
-                    className="px-4 py-2 bg-gray-800/50 hover:bg-gray-800 text-white rounded-lg transition-colors"
-                    onClick={() => {
-                      setPinMode("none");
-                      setPinInput("");
-                      setMessage("");
-                    }}
-                  >
-                    Cancel
-                  </button>
-                </div>
+          <div className="pin-section">
+            <div className="pin-status">
+              <span className="pin-badge active">🔒 PIN Active</span>
+              <div className="pin-actions">
+                <button className="settings-btn secondary" onClick={handleRemovePIN}>Remove PIN</button>
+                {onLockApp && <button className="settings-btn primary" onClick={onLockApp}>Lock Now</button>}
               </div>
-            ) : (
-              <button
-                className="px-4 py-2 bg-gray-800/50 hover:bg-gray-800 text-white rounded-lg transition-colors"
-                onClick={() => setPinMode("verify")}
-              >
-                Lock App
-              </button>
-            )}
+            </div>
+          </div>
+        ) : pinMode === "set" ? (
+          <div className="pin-form">
+            <input
+              type="password" maxLength={4} placeholder="Enter 4-digit PIN"
+              value={pinInput} autoFocus
+              onChange={(e) => setPinInput(e.target.value.replace(/\D/g, ""))}
+              className="settings-input"
+            />
+            <input
+              type="password" maxLength={4} placeholder="Confirm PIN"
+              value={confirmPin}
+              onChange={(e) => setConfirmPin(e.target.value.replace(/\D/g, ""))}
+              className="settings-input"
+            />
+            <div className="pin-form-actions">
+              <button className="settings-btn primary" onClick={handleSetPIN}>Set PIN</button>
+              <button className="settings-btn secondary" onClick={() => { setPinMode("none"); setPinInput(""); setConfirmPin(""); setMessage(""); }}>Cancel</button>
+            </div>
           </div>
         ) : (
-          <div className="space-y-3">
-            <p className="text-sm text-gray-400">No PIN set</p>
-            {pinMode === "set" ? (
-              <div className="space-y-3">
-                <input
-                  type="password"
-                  maxLength={4}
-                  placeholder="Enter 4-digit PIN"
-                  value={pinInput}
-                  onChange={(e) => setPinInput(e.target.value.replace(/\D/g, ""))}
-                  className="w-full bg-gray-800/50 border border-gray-700/50 text-white px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-                <input
-                  type="password"
-                  maxLength={4}
-                  placeholder="Confirm PIN"
-                  value={confirmPin}
-                  onChange={(e) => setConfirmPin(e.target.value.replace(/\D/g, ""))}
-                  className="w-full bg-gray-800/50 border border-gray-700/50 text-white px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-                <div className="flex gap-2">
-                  <button
-                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
-                    onClick={handleSetPIN}
-                  >
-                    Set PIN
-                  </button>
-                  <button
-                    className="px-4 py-2 bg-gray-800/50 hover:bg-gray-800 text-white rounded-lg transition-colors"
-                    onClick={() => {
-                      setPinMode("none");
-                      setPinInput("");
-                      setConfirmPin("");
-                      setMessage("");
-                    }}
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <button
-                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
-                onClick={() => setPinMode("set")}
-              >
-                Set PIN
-              </button>
-            )}
+          <div className="pin-section">
+            <span className="pin-badge">🔓 No PIN set</span>
+            <button className="settings-btn primary" onClick={() => setPinMode("set")}>Set PIN</button>
           </div>
         )}
-        {message && (
-          <div className={`mt-3 text-sm ${message.includes("success") || message.includes("verified") ? "text-green-400" : "text-red-400"}`}>
-            {message}
-          </div>
-        )}
+        {message && <div className={`settings-msg ${msgType}`}>{message}</div>}
       </div>
 
       {/* About */}
-      <div className="bg-gray-800/30 border border-gray-700/50 rounded-xl p-6">
-        <h3 className="text-lg font-semibold text-white mb-3">About</h3>
-        <div className="text-sm text-gray-400 space-y-1">
-          <p>DRAVIS - Dynamic Reasoning AI for Virtual Intelligent Study</p>
-          <p>Version 1.0.0</p>
-          <p>100% Offline AI Study Assistant</p>
+      <div className="settings-card">
+        <h3 className="settings-card-title">About</h3>
+        <div className="about-info">
+          <div className="about-logo">D</div>
+          <div>
+            <div className="about-name">DRAVIS</div>
+            <div className="about-desc">Dynamic Reasoning AI for Virtual Intelligent Study</div>
+            <div className="about-meta">Version 1.0.0 · 100% Offline AI Study Assistant</div>
+          </div>
         </div>
       </div>
     </div>

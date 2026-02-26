@@ -18,7 +18,8 @@ interface Session {
 type ActiveTab = 'chat' | 'docs' | 'quiz' | 'settings';
 
 function App() {
-  const [isLocked, setIsLocked] = useState(false);
+  // Start locked if PIN exists
+  const [isLocked, setIsLocked] = useState(() => !!localStorage.getItem('dravis_pin'));
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
   const [status, setStatus] = useState<'online' | 'offline'>('offline');
   const [activeTab, setActiveTab] = useState<ActiveTab>('chat');
@@ -177,7 +178,7 @@ function App() {
               <SettingsPanel
                 theme={theme}
                 setTheme={setTheme}
-                onLockApp={() => { }}
+                onLockApp={() => setIsLocked(true)}
               />
             )}
           </div>

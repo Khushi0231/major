@@ -1,123 +1,138 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { verifyPIN, checkPINExists } from "../utils/api";
+import './PINLock.css';
 
 export default function PINLock({ onUnlock }: { onUnlock: () => void }) {
-  const [pin, setPin] = useState("");
+  const [pin, setPin] = useState(["", "", "", ""]);
   const [error, setError] = useState("");
   const [checking, setChecking] = useState(true);
+  const [shaking, setShaking] = useState(false);
+  const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
   useEffect(() => {
     checkPinStatus();
   }, []);
 
   const checkPinStatus = async () => {
+    // Check localStorage first (faster)
+    const localPin = localStorage.getItem("dravis_pin");
+    if (localPin) {
+      setChecking(false);
+      return;
+    }
     try {
       const result = await checkPINExists();
       if (!result.exists) {
-        // No PIN set, unlock immediately
-        onUnlock();
+        onUnlock(); // No PIN set
       } else {
         setChecking(false);
       }
-    } catch (error) {
-      console.error("Failed to check PIN (backend may not be running):", error);
-      // If backend is not available, assume no PIN and unlock
-      // This allows the app to work even if backend is starting
-      onUnlock();
+    } catch {
+      // Backend not available, check localStorage
+      if (!localPin) onUnlock();
+      else setChecking(false);
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (pin.length !== 4) {
-      setError("PIN must be 4 digits");
-      return;
+  const handleDigit = (index: number, value: string) => {
+    const digit = value.replace(/\D/g, "").slice(-1);
+    const newPin = [...pin];
+    newPin[index] = digit;
+    setPin(newPin);
+    setError("");
+
+    if (digit && index < 3) {
+      inputRefs.current[index + 1]?.focus();
+    }
+
+    // Auto-submit when all 4 digits entered
+    if (digit && index === 3) {
+      const fullPin = newPin.join("");
+      if (fullPin.length === 4) {
+        verifyEnteredPIN(fullPin);
+      }
+    }
+  };
+
+  const handleKeyDown = (index: number, e: React.KeyboardEvent) => {
+    if (e.key === "Backspace" && !pin[index] && index > 0) {
+      inputRefs.current[index - 1]?.focus();
+    }
+  };
+
+  const verifyEnteredPIN = async (enteredPin: string) => {
+    // Check localStorage first
+    const localPin = localStorage.getItem("dravis_pin");
+    if (localPin) {
+      if (btoa(enteredPin) === localPin) {
+        onUnlock();
+        return;
+      } else {
+        triggerError();
+        return;
+      }
     }
 
     try {
-      const result = await verifyPIN(pin);
+      const result = await verifyPIN(enteredPin);
       if (result.verified) {
         onUnlock();
       } else {
-        setError("Incorrect PIN");
-        setPin("");
+        triggerError();
       }
-    } catch (error) {
-      setError("Error verifying PIN");
-      setPin("");
+    } catch {
+      triggerError();
     }
+  };
+
+  const triggerError = () => {
+    setError("Incorrect PIN");
+    setShaking(true);
+    setPin(["", "", "", ""]);
+    inputRefs.current[0]?.focus();
+    setTimeout(() => setShaking(false), 500);
   };
 
   if (checking) {
     return (
-      <div className="fixed inset-0 bg-gray-950 flex items-center justify-center">
-        <div className="text-pink-400 text-xl">Loading...</div>
+      <div className="pin-screen">
+        <div className="pin-loading-spinner" />
       </div>
     );
   }
 
   return (
-    <div className="fixed inset-0 bg-gray-950 flex items-center justify-center">
-      <div className="bg-gray-800 p-8 rounded-xl shadow-lg max-w-md w-full">
-        <div className="text-center mb-6">
-          <div className="text-3xl font-bold text-pink-400 mb-2">DRAVIS</div>
-          <div className="text-gray-400">Enter 4-digit PIN to unlock</div>
+    <div className="pin-screen">
+      <div className="pin-card">
+        <div className="pin-logo">D</div>
+        <h1 className="pin-title">DRAVIS</h1>
+        <p className="pin-subtitle">Enter your 4-digit PIN to unlock</p>
+
+        <div className={`pin-inputs ${shaking ? "shake" : ""}`}>
+          {pin.map((digit, i) => (
+            <input
+              key={i}
+              ref={(el) => { inputRefs.current[i] = el; }}
+              type="password"
+              inputMode="numeric"
+              maxLength={1}
+              value={digit}
+              onChange={(e) => handleDigit(i, e.target.value)}
+              onKeyDown={(e) => handleKeyDown(i, e)}
+              className="pin-digit"
+              autoFocus={i === 0}
+            />
+          ))}
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="flex justify-center gap-2">
-            {[0, 1, 2, 3].map((i) => (
-              <input
-                key={i}
-                type="text"
-                inputMode="numeric"
-                maxLength={1}
-                value={pin[i] || ""}
-                onChange={(e) => {
-                  const value = e.target.value.replace(/\D/g, "");
-                  if (value) {
-                    const newPin = pin.slice(0, i) + value + pin.slice(i + 1);
-                    setPin(newPin.slice(0, 4));
-                    setError("");
-                    // Auto-focus next input
-                    if (i < 3 && value) {
-                      const nextInput = document.querySelector(
-                        `input[data-pin-index="${i + 1}"]`
-                      ) as HTMLInputElement;
-                      nextInput?.focus();
-                    }
-                  }
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === "Backspace" && !pin[i] && i > 0) {
-                    const prevInput = document.querySelector(
-                      `input[data-pin-index="${i - 1}"]`
-                    ) as HTMLInputElement;
-                    prevInput?.focus();
-                  }
-                }}
-                data-pin-index={i}
-                className="w-12 h-12 text-center text-2xl font-bold bg-gray-700 text-white rounded border-2 border-gray-600 focus:border-pink-500 focus:outline-none"
-                autoFocus={i === 0}
-              />
-            ))}
-          </div>
+        {error && <div className="pin-error">{error}</div>}
 
-          {error && (
-            <div className="text-center text-red-400 text-sm">{error}</div>
-          )}
-
-          <button
-            type="submit"
-            className="w-full bg-pink-700 hover:bg-pink-600 text-white py-3 rounded-lg font-semibold transition"
-            disabled={pin.length !== 4}
-          >
-            Unlock
-          </button>
-        </form>
+        <div className="pin-dots">
+          {pin.map((d, i) => (
+            <span key={i} className={`pin-dot ${d ? "filled" : ""}`} />
+          ))}
+        </div>
       </div>
     </div>
   );
 }
-

@@ -1,96 +1,142 @@
-.pin-lock {
+/* PIN Lock Screen */
+.pin-screen {
+  position: fixed;
+  inset: 0;
+  background: var(--bg-primary);
   display: flex;
   align-items: center;
   justify-content: center;
-  height: 100vh;
-  background: var(--bg-primary);
+  z-index: 9999;
 }
 
 .pin-card {
-  background: var(--bg-secondary);
-  padding: 32px;
-  border-radius: 12px;
-  width: 400px;
-  max-width: 90%;
-  border: 1px solid var(--border);
   text-align: center;
+  padding: 40px;
 }
 
-.pin-card h3 {
-  margin-bottom: 12px;
+.pin-logo {
+  width: 64px;
+  height: 64px;
+  background: linear-gradient(135deg, #6366f1, #a78bfa);
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+  font-weight: 700;
+  color: white;
+  margin: 0 auto 16px;
+  box-shadow: 0 8px 24px rgba(99, 102, 241, 0.25);
+}
+
+.pin-title {
   font-size: 24px;
-  font-weight: 600;
+  font-weight: 700;
   color: var(--text-primary);
+  letter-spacing: -0.5px;
+  margin-bottom: 6px;
 }
 
-.pin-card p {
+.pin-subtitle {
   font-size: 13px;
-  color: var(--text-secondary);
-  margin-bottom: 24px;
+  color: var(--text-muted);
+  margin-bottom: 28px;
 }
 
-.pin-card input {
-  width: 100%;
-  padding: 12px;
-  border-radius: 6px;
-  border: 1px solid var(--border);
-  background: var(--bg-tertiary);
-  color: var(--text-primary);
-  font-family: monospace;
-  font-size: 24px;
-  letter-spacing: 8px;
+.pin-inputs {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.pin-digit {
+  width: 52px;
+  height: 56px;
   text-align: center;
-  margin-bottom: 16px;
-  transition: border-color 0.2s;
+  font-size: 22px;
+  font-weight: 600;
+  font-family: inherit;
+  background: var(--bg-secondary);
+  border: 2px solid var(--border);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  caret-color: var(--accent);
+  transition: var(--transition);
 }
 
-.pin-card input:focus {
+.pin-digit:focus {
   outline: none;
   border-color: var(--accent);
+  box-shadow: 0 0 0 4px var(--accent-dim);
 }
 
-.pin-card input::placeholder {
-  letter-spacing: normal;
-  font-size: 13px;
+/* Shake animation on wrong PIN */
+.pin-inputs.shake {
+  animation: shake 0.4s ease;
 }
 
-.pin-actions {
-  display: flex;
-  gap: 12px;
-  margin-top: 16px;
-}
+@keyframes shake {
 
-.pin-actions button {
-  flex: 1;
-  padding: 10px 16px;
-  border-radius: 6px;
-  border: none;
-  background: var(--accent);
-  color: white;
-  cursor: pointer;
-  font-weight: 600;
-  font-size: 13px;
-  transition: opacity 0.2s;
-}
+  0%,
+  100% {
+    transform: translateX(0);
+  }
 
-.pin-actions button:hover {
-  opacity: 0.9;
-}
+  20% {
+    transform: translateX(-8px);
+  }
 
-.pin-actions button.secondary {
-  background: var(--bg-tertiary);
-  color: var(--text-primary);
-  border: 1px solid var(--border);
+  40% {
+    transform: translateX(8px);
+  }
+
+  60% {
+    transform: translateX(-6px);
+  }
+
+  80% {
+    transform: translateX(6px);
+  }
 }
 
 .pin-error {
   color: var(--error);
-  margin-top: 12px;
-  font-size: 13px;
+  font-size: 12px;
+  font-weight: 500;
+  margin-bottom: 12px;
 }
 
-.pin-success {
-  color: var(--success);
-  margin-top: 12px;
-  font-size: 13px;
+.pin-dots {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+}
+
+.pin-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--border);
+  transition: var(--transition);
+}
+
+.pin-dot.filled {
+  background: var(--accent);
+  box-shadow: 0 0 6px rgba(99, 102, 241, 0.3);
+}
+
+.pin-loading-spinner {
+  width: 24px;
+  height: 24px;
+  border: 3px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
