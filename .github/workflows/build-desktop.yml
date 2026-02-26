@@ -1,9 +1,8 @@
 # ─── DRAVIS Desktop App — Build & Release ──────────────────────────
-# Triggers on pushing a version tag (v*) or manual dispatch.
 # Builds:
-#   1. Python backend → PyInstaller → dravis-bridge binary (per platform)
-#   2. React frontend + Tauri → .exe (Windows), .dmg (macOS), .AppImage (Linux)
-# Uploads all installers to a GitHub Release.
+#   1. Python backend → PyInstaller → dravis-bridge binary
+#   2. React frontend + Tauri → .exe (Windows), .dmg (macOS)
+# Publishes installers to GitHub Releases.
 
 name: Build Desktop App
 
@@ -11,6 +10,7 @@ on:
   push:
     tags:
       - 'v*'
+    branches: [main, fix/containerised-setup]
   workflow_dispatch:
     inputs:
       version:
@@ -22,96 +22,92 @@ permissions:
   contents: write
 
 jobs:
-  build-backend:
+  build:
     strategy:
       fail-fast: false
       matrix:
         include:
           - os: windows-latest
             target: windows
-            ext: .exe
+            sidecar-ext: .exe
+            rust-target: x86_64-pc-windows-msvc
           - os: macos-latest
             target: macos
-            ext: ''
-          - os: ubuntu-22.04
-            target: linux
-            ext: ''
+            sidecar-ext: ''
+            rust-target: x86_64-apple-darwin
 
     runs-on: ${{ matrix.os }}
-    name: Backend (${{ matrix.target }})
+    name: Build (${{ matrix.target }})
 
     steps:
       - uses: actions/checkout@v4
 
+      # ── Python backend ──────────────────────
       - name: Set up Python 3.11
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
 
       - name: Install Python dependencies
-        run: |
-          pip install pyinstaller
-          pip install -r services/chat/requirements.txt
-          pip install -r services/auth/requirements.txt
-          pip install -r services/document/requirements.txt
-          pip install -r services/quiz/requirements.txt
-          pip install httpx uvicorn[standard] fastapi
-
-      - name: Install system deps (Linux)
-        if: matrix.target == 'linux'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y tesseract-ocr libgl1 libglib2.0-0
+        run: pip install -r services/desktop_requirements.txt
 
       - name: Bundle backend with PyInstaller
         working-directory: services
+        shell: bash
         run: |
-          pyinstaller --onefile --name dravis-bridge${{ matrix.ext }} \
+          pyinstaller --onefile \
+            --name dravis-bridge \
             --hidden-import auth.app.main \
+            --hidden-import auth.app.routes \
+            --hidden-import auth.app.database \
             --hidden-import chat.app.main \
+            --hidden-import chat.app.routes \
+            --hidden-import chat.app.config \
+            --hidden-import chat.app.database \
+            --hidden-import chat.app.language_detector \
+            --hidden-import chat.app.llm.manager \
+            --hidden-import chat.app.llm.providers.base \
+            --hidden-import chat.app.llm.providers.langchain_ollama_provider \
+            --hidden-import chat.app.llm.providers.ollama_provider \
+            --hidden-import chat.app.llm.providers.openai_provider \
             --hidden-import document.app.main \
+            --hidden-import document.app.routes \
+            --hidden-import document.app.config \
+            --hidden-import document.app.database \
+            --hidden-import document.app.embeddings \
+            --hidden-import document.app.parser \
             --hidden-import quiz.app.main \
+            --hidden-import quiz.app.routes \
+            --hidden-import quiz.app.config \
+            --hidden-import quiz.app.schemas \
             --hidden-import langchain_ollama \
             --hidden-import langchain_core \
             --hidden-import sentence_transformers \
             --hidden-import chromadb \
             --hidden-import uvicorn \
             --hidden-import httpx \
+            --hidden-import sqlalchemy \
+            --hidden-import pymysql \
+            --hidden-import fitz \
+            --hidden-import docx \
+            --hidden-import pptx \
             --collect-all langchain_ollama \
             --collect-all sentence_transformers \
+            --collect-all chromadb \
             desktop_bridge.py
 
-      - name: Upload backend artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: dravis-bridge-${{ matrix.target }}
-          path: services/dist/dravis-bridge${{ matrix.ext }}
+      - name: Copy sidecar to Tauri
+        shell: bash
+        run: |
+          mkdir -p frontend/src-tauri/sidecars
+          if [ "${{ matrix.target }}" = "windows" ]; then
+            cp services/dist/dravis-bridge.exe frontend/src-tauri/sidecars/dravis-bridge-x86_64-pc-windows-msvc.exe
+          else
+            cp services/dist/dravis-bridge frontend/src-tauri/sidecars/dravis-bridge-x86_64-apple-darwin
+            chmod +x frontend/src-tauri/sidecars/dravis-bridge-x86_64-apple-darwin
+          fi
 
-  build-tauri:
-    needs: build-backend
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - os: windows-latest
-            target: windows
-            backend-artifact: dravis-bridge-windows
-            sidecar-name: dravis-bridge.exe
-          - os: macos-latest
-            target: macos
-            backend-artifact: dravis-bridge-macos
-            sidecar-name: dravis-bridge
-          - os: ubuntu-22.04
-            target: linux
-            backend-artifact: dravis-bridge-linux
-            sidecar-name: dravis-bridge
-
-    runs-on: ${{ matrix.os }}
-    name: Tauri (${{ matrix.target }})
-
-    steps:
-      - uses: actions/checkout@v4
-
+      # ── Frontend + Tauri ────────────────────
       - name: Set up Node.js 20
         uses: actions/setup-node@v4
         with:
@@ -119,26 +115,17 @@ jobs:
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.rust-target }}
 
-      - name: Install system deps (Linux)
-        if: matrix.target == 'linux'
+      - name: Install system deps (macOS)
+        if: matrix.target == 'macos'
         run: |
-          sudo apt-get update
-          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+          rustup target add x86_64-apple-darwin
 
       - name: Install frontend dependencies
         working-directory: frontend
         run: npm ci
-
-      - name: Download backend sidecar
-        uses: actions/download-artifact@v4
-        with:
-          name: ${{ matrix.backend-artifact }}
-          path: frontend/src-tauri/sidecars/
-
-      - name: Make sidecar executable (Unix)
-        if: matrix.target != 'windows'
-        run: chmod +x frontend/src-tauri/sidecars/${{ matrix.sidecar-name }}
 
       - name: Build Tauri app
         uses: tauri-apps/tauri-action@v0
@@ -146,6 +133,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           projectPath: frontend
+          tauriScript: npx tauri
           tagName: ${{ github.ref_name || format('v{0}', github.event.inputs.version) }}
           releaseName: 'DRAVIS ${{ github.ref_name || github.event.inputs.version }}'
           releaseBody: |
@@ -154,11 +142,10 @@ jobs:
             Download the installer for your platform:
             - **Windows**: `.exe` installer
             - **macOS**: `.dmg` disk image
-            - **Linux**: `.AppImage` portable app
 
             ### First Launch
             1. Install [Ollama](https://ollama.com) if you haven't already
-            2. Open DRAVIS — it will automatically download the AI model (~2 GB) on first run
+            2. Open DRAVIS — it will automatically download the AI model (~5 GB) on first run
             3. After that, DRAVIS works fully offline!
           releaseDraft: false
           prerelease: false

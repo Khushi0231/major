@@ -1,7 +1,12 @@
-// ─── DRAVIS Enterprise - API Client ─────────────────
-// All requests go through the Nginx Gateway.
-// In Docker: same origin (/). In Desktop: localhost:8080
-const API_BASE = import.meta.env.VITE_API_BASE || "http://127.0.0.1:8080";
+// ─── DRAVIS - API Client ────────────────────────────
+// Desktop: localhost:8080 | Mobile: user's desktop IP
+// Configurable via Settings → Backend URL
+function getApiBase(): string {
+  return localStorage.getItem('dravis_api_base')
+    || import.meta.env.VITE_API_BASE
+    || 'http://127.0.0.1:8080';
+}
+const API_BASE = getApiBase();
 
 // ─── Chat Service (/api/chat/) ──────────────────────
 
