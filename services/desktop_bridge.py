@@ -37,7 +37,7 @@ os.environ.setdefault("DATABASE_URL", f"sqlite:///{os.path.join(APP_DATA, 'dravi
 os.environ.setdefault("CHROMADB_PERSIST_DIR", os.path.join(APP_DATA, "chroma_db"))
 os.environ.setdefault("UPLOAD_DIR", os.path.join(APP_DATA, "uploads"))
 os.environ.setdefault("OLLAMA_BASE_URL", "http://127.0.0.1:11434")
-os.environ.setdefault("OLLAMA_MODEL", "llama3.2:3b")
+os.environ.setdefault("OLLAMA_MODEL", "llama3.1:8b")
 os.environ.setdefault("LOG_LEVEL", "INFO")
 
 # Remove CHROMADB_HOST so document service uses local persistence
@@ -166,6 +166,17 @@ def _run_gateway():
     import httpx
 
     app = FastAPI(title="DRAVIS Desktop Gateway")
+
+    # CORS — allow the Vite dev server to talk to us
+    from fastapi.middleware.cors import CORSMiddleware
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["*"],
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+
     client = httpx.AsyncClient(timeout=120)
 
     SERVICE_MAP = {

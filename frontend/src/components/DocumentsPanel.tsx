@@ -1,5 +1,6 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { uploadFile, listDocs, deleteDoc } from "../utils/api";
+import './DocumentsPanel.css';
 
 interface Document {
   document_id: string;
@@ -16,120 +17,138 @@ export default function DocumentsPanel({
   setStatus: React.Dispatch<React.SetStateAction<"online" | "offline">>;
 }) {
   const [documents, setDocuments] = useState<Document[]>([]);
-  const [selected, setSelected] = useState<File | null>(null);
+  const [dragging, setDragging] = useState(false);
   const [uploading, setUploading] = useState(false);
-
-  function onChoose(e: React.ChangeEvent<HTMLInputElement>) {
-    setSelected(e.target.files?.[0] ?? null);
-  }
+  const [uploadProgress, setUploadProgress] = useState("");
+  const fileRef = useRef<HTMLInputElement>(null);
 
   async function reload() {
     try {
       const docs = await listDocs();
       setDocuments(docs);
-    } catch (error) {
-      console.error("Failed to load documents:", error);
+      setStatus("online");
+    } catch {
+      console.error("Failed to load documents");
     }
   }
 
-  useEffect(() => {
-    reload();
-  }, []);
+  useEffect(() => { reload(); }, []);
 
-  async function onUpload() {
-    if (!selected) return;
-
+  async function handleUpload(file: File) {
     setUploading(true);
+    setUploadProgress(`Processing ${file.name}...`);
     try {
-      const res = await uploadFile(selected);
-      if (res && res.success !== false) {
+      const res = await uploadFile(file);
+      if (res?.success !== false) {
+        setUploadProgress(`✓ ${file.name} — ${res.chunks} chunks indexed`);
         await reload();
-        setStatus("online");
-        setSelected(null);
+        setTimeout(() => setUploadProgress(""), 3000);
       } else {
-        alert("Upload failed");
+        setUploadProgress("Upload failed");
       }
-    } catch (error) {
-      console.error("Upload error:", error);
-      alert("Upload failed");
+    } catch {
+      setUploadProgress("Upload failed — check backend");
     } finally {
       setUploading(false);
     }
   }
 
+  function onDrop(e: React.DragEvent) {
+    e.preventDefault();
+    setDragging(false);
+    const file = e.dataTransfer.files[0];
+    if (file) handleUpload(file);
+  }
+
+  function onFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (file) handleUpload(file);
+    e.target.value = "";
+  }
+
   async function onDelete(docId: string, docName: string) {
     if (!confirm(`Delete "${docName}"?`)) return;
-
     try {
       await deleteDoc(docId);
       await reload();
-      setStatus("online");
-    } catch (error) {
-      console.error("Delete error:", error);
+    } catch {
+      console.error("Delete failed");
     }
   }
 
+  function formatSize(bytes: number) {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1048576) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / 1048576).toFixed(1)} MB`;
+  }
+
   return (
-    <div className="max-w-4xl mx-auto p-6 space-y-6">
-      {/* Upload Card */}
-      <div className="bg-gray-800/30 border border-gray-700/50 rounded-xl p-6">
-        <h3 className="text-lg font-semibold text-white mb-4">Upload Document</h3>
-        <div className="flex gap-3">
-          <label className="flex-1 cursor-pointer">
-            <input
-              type="file"
-              onChange={onChoose}
-              accept=".pdf,.docx,.pptx,.txt,.md,.jpg,.jpeg,.png,.bmp,.py,.java,.cpp,.js,.json"
-              className="hidden"
-            />
-            <div className="border-2 border-dashed border-gray-600 rounded-lg px-4 py-8 text-center hover:border-gray-500 transition-colors">
-              <div className="text-gray-400">
-                {selected ? `📄 ${selected.name}` : "📁 Click to select file"}
-              </div>
-            </div>
-          </label>
-          <button
-            onClick={onUpload}
-            disabled={!selected || uploading}
-            className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50 self-end"
-          >
-            {uploading ? "Uploading..." : "Upload"}
-          </button>
+    <div className="docs-panel">
+      {/* Drop Zone */}
+      <div
+        className={`drop-zone ${dragging ? "active" : ""}`}
+        onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
+        onDragLeave={() => setDragging(false)}
+        onDrop={onDrop}
+        onClick={() => fileRef.current?.click()}
+      >
+        <input
+          ref={fileRef}
+          type="file"
+          onChange={onFileSelect}
+          accept=".pdf,.docx,.pptx,.txt,.md,.jpg,.jpeg,.png"
+          hidden
+        />
+        <div className="drop-icon">{uploading ? "⏳" : "📄"}</div>
+        <div className="drop-title">
+          {uploading ? "Processing..." : "Drop file here or click to upload"}
         </div>
+        <div className="drop-subtitle">
+          PDF, DOCX, PPTX, TXT, MD, Images — up to 50 MB
+        </div>
+        {uploadProgress && (
+          <div className={`drop-status ${uploadProgress.startsWith("✓") ? "success" : ""}`}>
+            {uploadProgress}
+          </div>
+        )}
       </div>
 
-      {/* Documents Grid */}
-      <div>
-        <h3 className="text-lg font-semibold text-white mb-4">
-          Documents ({documents.length})
-        </h3>
+      {/* Document List */}
+      <div className="docs-section">
+        <div className="docs-section-title">
+          Your Documents
+          <span className="docs-count">{documents.length}</span>
+        </div>
+
         {documents.length === 0 ? (
-          <div className="text-center py-16 text-gray-500">
-            <div className="text-5xl mb-4">📚</div>
-            <p>No documents yet</p>
-            <p className="text-sm mt-2">Upload your first document to get started</p>
+          <div className="docs-empty">
+            <div className="docs-empty-icon">📚</div>
+            <div>No documents yet</div>
+            <div className="docs-empty-hint">Upload your study material to enable RAG-powered answers</div>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div className="docs-grid">
             {documents.map((doc) => (
-              <div
-                key={doc.document_id}
-                className="bg-gray-800/30 border border-gray-700/50 rounded-lg p-4 hover:bg-gray-800/50 transition-colors"
-              >
-                <div className="flex items-start justify-between">
-                  <div className="flex-1 min-w-0">
-                    <div className="font-medium text-white truncate">{doc.document_name}</div>
-                    <div className="text-sm text-gray-400 mt-1">
-                      {doc.chunk_count} chunks
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => onDelete(doc.document_id, doc.document_name)}
-                    className="ml-3 px-3 py-1.5 text-sm text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-lg transition-colors"
-                  >
-                    Delete
-                  </button>
+              <div key={doc.document_id} className="doc-card">
+                <div className="doc-card-icon">
+                  {doc.document_name.endsWith(".pdf") ? "📕" :
+                    doc.document_name.endsWith(".docx") ? "📘" :
+                      doc.document_name.endsWith(".pptx") ? "📙" : "📄"}
                 </div>
+                <div className="doc-card-info">
+                  <div className="doc-card-name">{doc.document_name}</div>
+                  <div className="doc-card-meta">
+                    {doc.chunk_count} chunks · {formatSize(doc.file_size)} ·{" "}
+                    <span className={`doc-status ${doc.status}`}>{doc.status}</span>
+                  </div>
+                </div>
+                <button
+                  className="doc-delete-btn"
+                  onClick={() => onDelete(doc.document_id, doc.document_name)}
+                  title="Delete document"
+                >
+                  ×
+                </button>
               </div>
             ))}
           </div>
